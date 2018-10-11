@@ -1,0 +1,46 @@
+PARAMETER				            SYMBOL
+
+World frame:
+	x-coordinate				    x
+	y-coordinate				    y
+	z-coordinate				    z
+
+Rocket frame:
+	x-coordinate				    xr
+	y-coordinate				    yr
+	z-coordinate				    zr
+
+ROCKET:	
+
+	Nose cone:			
+		Length				        Lcone
+		Diameter			        Dcone
+		Density				        rhoNC
+					
+	Body:				
+		Length				        Lbody
+		Diameter			        Dbody
+		Density				        rhoB
+					
+	Fins:				
+		Cord				        Fcord
+		Density 			        rhoF
+					
+	Motor:
+		Impulse 			        I
+		Burn time			        Tb
+		Mass w. fuel			    Me0
+		Mass wo. fuel		        Me1
+	
+
+	Coefficients:			
+		Drag				        Cd
+		Lift				        Cl
+		Moment				        Cm
+		
+
+ENVIRONMENT:
+	
+	Local gravity				    g
+	B. pressure @ sealvl    		P0
+	Temperature @ sealvl			T0					
