@@ -2,7 +2,7 @@
 Module containing all the forces acting on a rocket
 
 Version: WIP
-last edit: 17.10.2018
+Last edit: 17.10.2018
 
 --Propulse NTNU--
 """
@@ -21,6 +21,7 @@ h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 # Forces
 
 def gravity(rocket):
+
 	"""
 	Gravitational force on the rocket
 	Assumptions:- Homogenous gravity field in -z direction
@@ -43,31 +44,30 @@ def thrust(rocket, t):
 	return np.array([Thrust, 0, 0])
 
 
-def SAMdrag(rocket, state):
+def SAMdrag(rocket, position, linearVelocity):
 	"""
-	TODO: Add wind?
 		Assumptions:- AoA ~ 0
 					- Quadratic drag F ~ -kv^2
 	:param rocket: [rocket class] The rocket object
-	:param state: [np.array] The current state of the rocket object
+	:param position: [np.array] The position vector in world coordinates
+	:param linearVelocity: [np.array] The current linear velocity
 	:return: [np.array] The drag force (SAM) in the world frame
 	"""
-	z = state[2] # Vertical position of rocket
-	V = state[3:6] # Velocity of rocket
-	Cd = rocket.getCd(state)
+	z = position[2] # Vertical position of rocket
+	Cd = rocket.getCd()
 	Aref = np.pi*(rocket.body.D/2)**2
 	k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
 
-	return -k*np.linalg.norm(V)*V
+	return -k*np.linalg.norm(linearVelocity)*linearVelocity
 
 
 # Torques
 
-def SAMmoment(rocket, state):
+def SAMmoment(rocket, drag):
 	"""
 
 	:param rocket: [rocket class] The rocket object
-	:param state: [np.array] The current state of the rocket object
+	:param drag: [np.array] The current drag
 	:return: [np.array] The moment created by Drag about CM of the rocket (SAM)
 	"""
 	r = rocket.getCOP() - rocket.getCOM()

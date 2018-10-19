@@ -1,46 +1,49 @@
-PARAMETER				            SYMBOL
+PARAMETER				          
 
 World frame:
-	x-coordinate				    x
-	y-coordinate				    y
-	z-coordinate				    z
+	x-coordinate
+	y-coordinate				  
+	z-coordinate
+	O: arbitrary	  
 
 Rocket frame:
-	x-coordinate				    xr
-	y-coordinate				    yr
-	z-coordinate				    zr
+	x-coordinate				  
+	y-coordinate				  
+	z-coordinate
+	O: at nosetip, x-axis down body axis				  
 
 ROCKET:	
 
 	Nose cone:			
-		Length				        Lcone
-		Diameter			        Dcone
-		Density				        rhoNC
-					
-	Body:				
-		Length				        Lbody
-		Diameter			        Dbody
-		Density				        rhoB
-					
-	Fins:				
-		Cord				        Fcord
-		Density 			        rhoF
-					
+		Length				  
+		Diameter			  
+		Density				  
+		
+	Body:	
+		Length				  
+		Diameter			  
+		Density				  
+		
+	Fins:	
+		Cord
+		Length
+		Density 			  
+		
 	Motor:
-		Impulse 			        I
-		Burn time			        Tb
-		Mass w. fuel			    Me0
-		Mass wo. fuel		        Me1
+		Impulse 			  
+		Burn time			  
+		Mass w. fuel			  
+		Mass wo. fuel		        
 	
 
 	Coefficients:			
-		Drag				        Cd
-		Lift				        Cl
-		Moment				        Cm
+		Drag				  
+		Lift				  
+		Moment				  
 		
 
 ENVIRONMENT:
 	
-	Local gravity				    g
-	B. pressure @ sealvl    		P0
-	Temperature @ sealvl			T0					
+	Local gravity				  
+	B. pressure @ sealvl    		
+	Temperature @ sealvl							
