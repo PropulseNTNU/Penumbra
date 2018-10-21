@@ -18,6 +18,9 @@ m = 29e-3  # Molecular mass of Air [kg]
 #h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 
 
+# Hei detter er ny esidfj if
+
+
 # Forces
 
 def gravity(rocket, t):
