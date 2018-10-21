@@ -1,8 +1,4 @@
-wrong = 3
-
-erf = 2.9
-
-diameter = 2.98
-
-string = 'hei'
-type = 'circular'
+diameter = 40e-2
+height = 80e-2
+thickness = 5e-3
+density = 1000

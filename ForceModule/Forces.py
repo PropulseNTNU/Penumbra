@@ -65,11 +65,10 @@ def SAMdrag(rocket, position, linearVelocity):
 
 def SAMmoment(rocket, drag):
 	"""
-
 	:param rocket: [rocket class] The rocket object
-	:param drag: [np.array] The current drag
-	:return: [np.array] The moment created by Drag about CM of the rocket (SAM)
+	:param drag: [np.array] The current drag in rocket coordinates
+	:return: [np.array] The moment created by Drag about CM of the rocket in rocket coordinates
 	"""
 	r = rocket.getCOP() - rocket.getCOM()
-	return np.cross(r,SAMdrag(rocket, state))
+	return np.cross(r, drag)
 

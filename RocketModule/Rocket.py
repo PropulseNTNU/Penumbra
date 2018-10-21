@@ -2,56 +2,123 @@
 Rocket module - The definition of the rocket and its constituent parts
 
 Version: WIP
-Last edit: 17.10.2018
+Last edit: 21.10.2018
 
 --Propulse NTNU--
 """
 import numpy as np
-import scipy.integrate as quadrature
-import scipy.interpolate as interpolate
+from scipy.integrate import simps
+from scipy.interpolate import interp1d
+
+# Geometry types
+noseTypes = ['conic', 'dome']
+finTypes = ['triangular', 'trapezoid', 'rectangular']
 
 
-class NoseCone:
+class Nose:
 
-	def __init__(self, diameter, length, thickness, density):
+	# Constructor for conic nose
+	def __init__(self, noseType, *args):
 		# Member variables
-		self.__diameter = diameter
-		self.__length = length
-		self.__thickness = thickness
-		self.__density = density
+		self.__noseType = noseType
+
+		if noseType == noseTypes[0]:  # Conic
+			self.__diameter = args[0]
+			self.__height = args[1]
+			self.__thickness = args[2]
+			self.__density = args[3]
+		elif noseType == noseTypes[1]:  # Dome
+			self.__diameter = args[0]
+			self.__thickness = args[1]
+			self.__density = args[2]
 
 	def __str__(self):
-		D = str(self.__diameter)
-		l = str(self.__length)
-		d = str(self.__thickness)
-		m = str(self.getMass())
-		rho = str(self.__density)
-		return "Diameter: " + D + "m\n" + "Length: " + l + "m\n" + "Thickness: " + d + "m\n\n" + "Mass: " + m + "kg\n" \
-			   + "Density: " + rho + "kgm^-3 "
+
+		if self.__noseType == noseTypes[0]:  # Conic
+			D = str(self.__diameter)
+			h = str(self.__height)
+			d = str(self.__thickness*1000)
+			m = str(round(self.getMass(), 2))
+			rho = str(self.__density)
+			return "Diameter: " + D + " m\n" + "Height: " + h + " m\n" + "Thickness: " + d + " mm\n\n" + "Mass: " + m + \
+				   " kg\n" + "Density: " + rho + " kgm^-3"
+
+		elif self.__noseType == noseTypes[1]:  # Dome
+			D = str(self.__diameter)
+			d = str(self.__thickness*1000)
+			m = str(round(self.getMass(), 2))
+			rho = str(self.__density)
+			return "Diameter: " + D + " m\n" + " m\n" + "Thickness: " + d + " mm\n\n" + "Mass: " + m + \
+				   " kg\n" + "Density: " + rho + " kgm^-3"
+
 
 	# Member functions
 	def getVolume(self):
-		R = self.__diameter/2
-		h = self.__length
+		if self.__noseType == noseTypes[0]:  # Conic
+			d = self.__thickness
+			R2 = self.__diameter/2  # Outer radius of cone
+			H2 = self.__height
+			H1 = H2 - d
+			R1 = R2*H1/H2
+			return np.pi/3*(H2*R2**2 - H1*R1**2)
+		elif self.__noseType == noseTypes[1]:  # Dome
+			d = self.__thickness
+			R2 = self.__diameter/2
+			R1 = R2 - d
+			return 2/3*np.pi*(R2**3 - R1**3)
+
+	def getCavityVolum(self):
 		d = self.__thickness
-		return np.pi/3*(h*R**2 - (h - d)*(R - 2*d)**2)
+		R2 = self.__diameter/2  # Outer radius of cone
+		H2 = self.__height
+		H1 = H2 - d
+		R1 = R2*H1/H2
+		return np.pi/3*H1*R1**2
+
+	def getLength(self):
+		if self.__noseType == noseTypes[0]:
+			return self.__height
+		elif self.__noseType == noseTypes[1]:
+			return self.__diameter/2
 
 	def getMass(self):
 		return self.__density*self.getVolume()
 
 	def getCOM(self):
-		pass
+		if self.__noseType == noseTypes[0]:
+			V = self.getVolume()
+			d = self.__thickness
+			R2 = self.__diameter/2  # Outer radius of cone
+			H2 = self.__height
+			H1 = H2 - d
+			R1 = R2*H1/H2
+			a = 1/2*H2**2 - 2*H2**3/(3*H1) + H2**4/(4*H1**2)
+			return np.pi/V*((H2*R2)**2/12 - a*R1**2)
+		elif self.__noseType == noseTypes[1]:
+			d = self.__thickness
+			R2 = self.__diameter/2
+			R1 = R2 - d
+			return 3/8*(R2**4 - R1**4)/(R2**3 - R1**3)
 
 	def getCOP(self):
 		pass
 
 	@staticmethod
-	def from_file(file):
-		diameter = find_parameter(file, "diameter")
-		length = find_parameter(file, "length")
-		density = find_parameter(file, "density")
-		thickness = find_parameter(file, "thickness")
-		return NoseCone(diameter, length, thickness, density)
+	def from_file(file, noseType):
+		if noseType.lower() == noseTypes[0]:  # Conic
+			diameter = find_parameter(file, "diameter")
+			height = find_parameter(file, "height")
+			density = find_parameter(file, "density")
+			thickness = find_parameter(file, "thickness")
+			return Nose(noseType.lower(), diameter, height, thickness, density)
+		elif noseType.lower() == noseTypes[1]:
+			diameter = find_parameter(file, "diameter")
+			thickness = find_parameter(file, "thickness")
+			density = find_parameter(file, "density")
+			return Nose(noseType.lower(), diameter, thickness, density)
+		else:
+			print("ERROR: invalid nose type encountered at initialization. Please check your spelling.")
+			exit(1)
 
 
 class Body:
@@ -68,21 +135,32 @@ class Body:
 		d = str(self.__thickness)
 		m = str(self.getMass())
 		rho = str(self.__density)
-		return "Diameter: " + D + "m\n" + "Length: " + l + "m\n" + "Thickness: " + d + "m\n\n" + "Mass: " + m + "kg\n" \
-			   + "Density: " + rho + "kgm^-3 "
+		return "Diameter: " + D + " m\n" + "Length: " + l + " m\n" + "Thickness: " + d + " m\n\n" + "Mass: " + m +\
+			   " kg\n" + "Density: " + rho + " kgm^-3 "
 
 	# Member functions
 	def getVolume(self):
-		R = self.__diameter/2
-		h = self.__length
 		d = self.__thickness
-		return np.pi*(R**2 - (R - 2*d)**2)*h
+		R2 = self.__diameter/2
+		R1 = R2 - d
+		h = self.__length
+		return np.pi*(R2**2 - R1**2)*h
+
+	def getCavityVolum(self):
+		d = self.__thickness
+		R = self.__diameter/2 - d
+		l = self.__length
+		return np.pi*l*R**2
+
+	def getLength(self):
+		return self.__length
 
 	def getMass(self):
 		return self.__density*self.getVolume()
 
 	def getCOM(self):
-		pass
+		l = self.__length
+		return l/2
 
 	def getCOP(self):
 		pass
@@ -175,3 +253,7 @@ def find_parameter(file, parameter):
 		arr = base.split("=")
 	File.close()
 	return eval(arr[1])
+
+nose = Nose.from_file('test.dot', 'conic')
+print(nose.getCOM())
+print(nose)
