@@ -12,7 +12,6 @@ from scipy.interpolate import interp1d
 
 # Geometry types
 noseTypes = ['conic', 'dome']
-finTypes = ['triangular', 'trapezoid', 'rectangular']
 
 
 class Nose:
@@ -40,7 +39,7 @@ class Nose:
 			d = str(self.__thickness*1000)
 			m = str(round(self.getMass(), 2))
 			rho = str(self.__density)
-			return "Diameter: " + D + " m\n" + "Height: " + h + " m\n" + "Thickness: " + d + " mm\n\n" + "Mass: " + m + \
+			return "Diameter: " + D + " m\n" + "Height: " + h + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
 
 		elif self.__noseType == noseTypes[1]:  # Dome
@@ -135,7 +134,7 @@ class Body:
 		d = str(self.__thickness)
 		m = str(self.getMass())
 		rho = str(self.__density)
-		return "Diameter: " + D + " m\n" + "Length: " + l + " m\n" + "Thickness: " + d + " m\n\n" + "Mass: " + m +\
+		return "Diameter: " + D + " m\n" + "Length: " + l + " m\n" + "Thickness: " + d + " m\n" + "Mass: " + m +\
 			   " kg\n" + "Density: " + rho + " kgm^-3 "
 
 	# Member functions
@@ -176,34 +175,40 @@ class Body:
 
 class Fin:
 
-	def __init__(self, cord, length, thickness, density, type):
-		# Assuming fins are triangular/circular etc.
-		self.__cord = cord  # cord length is the span of the fin
-		self.__length = length
-		self.__density = density
-		self.__thickness = thickness
-		self.__type = type
+	def __init__(self, *args):
+		self.__cord = args[0]
+		self.__length1 = args[1]  # Length of fin along body
+		self.__length2 = args[2]  # Length of fin along outer edge
+		self.__angle = args[3]  # Angle of ray from body to top outer edge
+		self.__thickness = args[4]
+		self.__density = args[5]
 
 	def __str__(self):
-		C = str(self.__cord)
+		Cord = str(self.__cord)
 		d = str(self.__thickness)
 		m = str(self.getMass())
 		rho = str(self.__density)
-		return "Radius: " + C + "m\n" + "Thickness: " + d + "m\n\n" + "Mass: " + m + "kg\n" \
-			   + "Density: " + rho + "kgm^-3"
+		return "Cord: " + Cord + " m\n" + "Thickness: " + d + " m\n" + "Mass: " + m + " kg\n" \
+			   + "Density: " + rho + " kgm^-3"
 
 	# Member functions
 
 	def getVolume(self):
-		R = self.__cord/2
+		l1 = self.__length1
+		l2 = self.__length2
+		cord = self.__cord
 		d = self.__thickness
-		return (np.pi*R**2)*d
+		return 1/2*(l1 + l2)*cord*d
 
 	def getMass(self):
 		return self.__density*self.getVolume()
 
 	def getCOM(self):
-		pass
+		cord = self.__cord
+		l1 = self.__length1
+		l2 = self.__length2
+		a = self.__angle
+		return cord/np.tan(a) + 3/4*(l2-l1)
 
 	def getCOP(self):
 		pass
@@ -211,11 +216,12 @@ class Fin:
 	@staticmethod
 	def from_file(file):
 		cord = find_parameter(file, "cord")
-		length = find_parameter(file, "length")
+		length1 = find_parameter(file, "length1")
+		length2 = find_parameter(file, "length2")
+		angle = find_parameter(file, "angle")
 		density = find_parameter(file, "density")
 		thickness = find_parameter(file, "thickness")
-		type = find_parameter(file, "type")
-		return Fin(cord, length, thickness, density, type)
+		return Fin(cord, length1, length2, angle, thickness, density)
 
 
 class Motor:
