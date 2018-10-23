@@ -2,7 +2,7 @@
 Rocket module - The definition of the rocket and its constituent parts
 
 Version: WIP
-Last edit: 21.10.2018
+Last edit: 23.10.2018
 
 --Propulse NTNU--
 """
@@ -49,7 +49,6 @@ class Nose:
 			rho = str(self.__density)
 			return "Diameter: " + D + " m\n" + " m\n" + "Thickness: " + d + " mm\n\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
-
 
 	# Member functions
 	def getVolume(self):
@@ -134,7 +133,7 @@ class Body:
 		d = str(self.__thickness)
 		m = str(self.getMass())
 		rho = str(self.__density)
-		return "Diameter: " + D + " m\n" + "Length: " + l + " m\n" + "Thickness: " + d + " m\n" + "Mass: " + m +\
+		return "Diameter: " + D + " m\n" + "Length: " + l + " m\n" + "Thickness: " + d + " m\n" + "Mass: " + m + \
 			   " kg\n" + "Density: " + rho + " kgm^-3 "
 
 	# Member functions
@@ -200,6 +199,9 @@ class Fin:
 		d = self.__thickness
 		return 1/2*(l1 + l2)*cord*d
 
+	def getLength(self):
+		return self.__length1
+
 	def getMass(self):
 		return self.__density*self.getVolume()
 
@@ -208,7 +210,7 @@ class Fin:
 		l1 = self.__length1
 		l2 = self.__length2
 		a = self.__angle
-		return cord/np.tan(a) + 3/4*(l2-l1)
+		return cord/np.tan(a) + 3/4*(l2 - l1)
 
 	def getCOP(self):
 		pass
@@ -226,26 +228,113 @@ class Fin:
 
 class Motor:
 
-	def __init__(self, structMass, fuelMass, thrustData):
+	def __init__(self, *args):
+		self.__name = args[0]
+		self.__thrustMatrix = args[1]  # Assuming thrust values along 2nd column
+		self.__timeArray = self.__thrustMatrix[:, 0]
+		self.__thrustArray = self.__thrustMatrix[:, 1]
+		self.__diameter = args[2]
+		self.__length = args[3]
+		self.__propellantMass = args[4]
+		self.__frameMass = args[5]
+		self.__mass = self.__frameMass + self.__propellantMass
+		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray)  # Linear Interpolation for thrust curve
+		self.__totalImpulse = round(simps(self.__thrustArray, self.__timeArray), 2)
+		self.__burnTime = self.__timeArray[-1]
+		self.__avgThrust = round(self.__totalImpulse/self.__burnTime, 2)
+
+	def __str__(self):
+		I = str(self.__totalImpulse/1e3)
+		avg = str(self.__avgThrust)
+		timeMax, Tmax = self.getMaxThrust()
+		bTime = self.__burnTime
+		name = self.getName()
+		sep = (len(name) + 7)*'_'
+		return "Motor: " + name + "\n" + sep + "\nTotal impulse: " + I + " kNs\n" + "Average thrust: " + avg + " kN" +\
+				"Maximum thrust: " + str(Tmax/1e3) + " kN,\tat time " + timeMax + " s\n" + "Burntime: " + bTime + "s \n"
+
+	def getName(self):
+		return self.__name
+
+	def getMass(self):
+		return self.__mass
+
+	def getCOM(self):
+		propM = self.__propellantMass
+		frameM = self.__frameMass
+		Mtot = self.__mass
+		l = self.__length
+		return 1/Mtot*(frameM + propM**2/Mtot)*l/2
+
+	def getLength(self):
+		return self.__length
+
+	def getMaxThrust(self):
+		i = np.argmax(self.__thrustArray)
+		maxThrust = self.__thrustMatrix[i]
+		return maxThrust[0], maxThrust[1]  # 1 timeAtMax, 2 maxThrust
+
+	def getAverageThrust(self):
+		return self.__avgThrust
+
+	def getTotalImpulse(self):
+		return self.__totalImpulse
+
+	def setMass(self, propellantMass):
+		self.__propellantMass = propellantMass
+		self.__mass = self.__frameMass + propellantMass
+
+	def thrust(self, t):
+		return self.__thrustFunction(t)
+
+	@staticmethod
+	def from_ThrustFile(motorName, thrustFile):
+		# diameter, length, propMass, frameMass, Thrust = read_thrustFile(thrustFile)  # thrust is 2D ( N x 2 ) array
+		# return Motor(motorName, Thrust, diameter, length, propMass, frameMass)
 		pass
 
 
-# TODO: implement fins (triangular, circular, square), motor, recovery
-# TODO: implement COM for each part
 # TODO: implement COP for each part
+# TODO: Placement of relevant rocket parts can be solved by using a file
 
 
 class RocketSimple:
 
-	def __init__(self, body, fin, nosecone, motor, recovery, payload, slug):
-		self.__body = body
-		self.__fin = fin
-		self.__nosecone = nosecone
-		self.__motor = motor
-		self.__recovery = recovery
-		self.__payload = payload
-		self.__slug = slug
+	def __init__(self, nose, body, fin, motor, recovery, payload, slug, partsPlacement):
+		self.__rocketParts = np.array([nose ,body, fin, motor, recovery, payload, slug])
+		self.__massOfRocketParts = np.array([part.getMass() for part in self.__rocketParts])
+		self.__noseCOM = nose.getCOM() - nose.getLength()
+		self.__bodyCOM = body.getCOM() - body.getLength() - nose.getLength()
+		# Assuming placement of fin is position of top edge relative to body top
+		self.__finCOM = partsPlacement[0] - fin.getCOM() - nose.getLength()
+		# Assuming placement of motor is position of motor top relative to body top
+		self.__motorCOM = partsPlacement[1] - motor.getCOM() - nose.getLength()
+		self.__recoveryCOM = recovery.getCOM()
 
+		self.__COMofRocketParts = np.array([self.__noseCOM, self.__bodyCOM, self.__finCOM, motor,
+											self.__recoveryCOM])
+	def getNose(self):
+		return self.__rocketParts[0]
+
+	def getBody(self):
+		return self.__rocketParts[1]
+
+	def getFin(self):
+		return self.__rocketParts[2]
+
+	def getMotor(self):
+		return self.__rocketParts[3]
+
+	def getMass(self):
+		return self.__massOfRocketParts.sum()
+
+	def getCOM(self):
+		return (self.__massOfRocketParts*self.__COMofRocketParts).sum()/self.getMass()
+
+
+	@staticmethod
+	def from_file(file):
+		pass
 
 def find_parameter(file, parameter):
 	File = open(file, 'r')
@@ -259,6 +348,7 @@ def find_parameter(file, parameter):
 		arr = base.split("=")
 	File.close()
 	return eval(arr[1])
+
 
 nose = Nose.from_file('test.dot', 'conic')
 print(nose.getCOM())

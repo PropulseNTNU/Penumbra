@@ -2,7 +2,7 @@
 Module containing all the forces acting on a rocket
 
 Version: WIP
-Last edit: 17.10.2018
+Last edit: 23.10.2018
 
 --Propulse NTNU--
 """
@@ -16,7 +16,6 @@ P0 = RockMod.find_parameter("environment.dot", "pressure")  # Barometric pressur
 m = 29e-3  # Molecular mass of Air [kg]
 rho0 = P0/(R*T0/m)  # Air density at sea level [kg*m^-3]
 h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
-
 
 # Forces
 
@@ -39,9 +38,7 @@ def thrust(rocket, t):
 	:param t: [float] point in time [s]
 	:return: [np.array] thrust force at time t in rocket frame
 	"""
-	Thrust = rocket.getMotor().thrust(t)
-
-	return np.array([Thrust, 0, 0])
+	return np.array([rocket.getMotor().thrust(t), 0, 0])
 
 
 def SAMdrag(rocket, position, linearVelocity):
