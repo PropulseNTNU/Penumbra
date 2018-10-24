@@ -52,7 +52,7 @@ def SAMdrag(rocket, position, linearVelocity):
 	"""
 	z = position[2] # Vertical position of rocket
 	Cd = rocket.getCd()
-	Aref = np.pi*(rocket.body.D/2)**2
+	Aref = np.pi*(rocket.body.getDiameter()/2)**2
 	k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
 
 	return -k*np.linalg.norm(linearVelocity)*linearVelocity
