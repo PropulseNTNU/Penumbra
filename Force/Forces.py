@@ -60,3 +60,18 @@ def SAMdrag(rocket, position, linearVelocity):
 	k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
 
 	return -k*np.linalg.norm(linearVelocity)*linearVelocity
+<<<<<<< HEAD:Force/Forces.py
+=======
+
+
+# Torques
+
+def SAMmoment(rocket, drag):
+	"""
+	:param rocket: [rocket class] The rocket object
+	:param drag: [np.array] The current drag in rocket coordinates
+	:return: [np.array] The moment created by Drag about CM of the rocket in rocket coordinates
+	"""
+	r = rocket.getCOP() - rocket.getCOM()
+	return np.cross(r, drag)
+>>>>>>> Added total_impulse to motor files. Added new:ForceModule/Forces.py
