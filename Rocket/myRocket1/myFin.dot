@@ -1,0 +1,8 @@
+root_chord = 40e-2
+root_angle = 30
+tip_chord = 5e-2
+semi_chord = 30e-2
+thickness = 4e-3
+density = 2700
+
+ 

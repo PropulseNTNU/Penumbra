@@ -2,23 +2,23 @@
 Rocket module - The definition of the rocket and its constituent parts
 
 Version: 1.0
-Last edit: 1.11.2018
+Last edit: 11.11.2018
 
 --Propulse NTNU--
 """
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from lib.File_utilities import find_parameter
 
 # Define some things for plotting
-#font = {'family': 'normal', 'weight': 'bold', 'size': 16}
-#plt.rc('font', **font)
-#plt.rc('text', usetex=True)
-#plt.rcParams['text.latex.preamble'] = [r'\boldmath']
+font = {'family': 'normal', 'weight': 'bold', 'size': 16}
+plt.rc('font', **font)
+plt.rc('text', usetex=True)
+plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 # Geometry types
 noseTypes = ['cone', 'hemisphere', 'Von Karman']
-
 
 class Nose:
 
@@ -32,7 +32,7 @@ class Nose:
 			self.__length = args[1]
 			self.__thickness = args[2]
 			self.__density = args[3]
-		elif noseType == noseTypes[1]:  # Dome
+		elif noseType == noseTypes[1]:  # Hemisphere
 			self.__diameter = args[0]
 			self.__length = self.__diameter/2
 			self.__thickness = args[1]
@@ -48,7 +48,7 @@ class Nose:
 			h = str(self.__length)
 			return "Diameter: " + D + " m\n" + "Height: " + h + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
-		elif self.__noseType == noseTypes[1]:  # Dome
+		elif self.__noseType == noseTypes[1]:  # Hemisphere
 			return "Diameter: " + D + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
 
@@ -61,7 +61,7 @@ class Nose:
 			H1 = H2 - d
 			R1 = R2*H1/H2
 			return np.pi/3*(H2*R2**2 - H1*R1**2)
-		elif self.__noseType == noseTypes[1]:  # Dome
+		elif self.__noseType == noseTypes[1]:  # Hemisphere
 			d = self.__thickness
 			R2 = self.__diameter/2
 			R1 = R2 - d
@@ -83,7 +83,7 @@ class Nose:
 			H1 = H2 - d
 			R1 = R2*H1/H2
 			return np.pi/3*H1*R1**2
-		elif self.__noseType == noseTypes[1]:  # Dome
+		elif self.__noseType == noseTypes[1]:  # Hemisphere
 			d = self.__thickness
 			R2 = self.__diameter/2
 			R1 = R2 - d
@@ -159,7 +159,7 @@ class Nose:
 			density = find_parameter(file, "density")
 			thickness = find_parameter(file, "thickness")
 			return Nose(noseType.lower(), eval(diameter), eval(length), eval(thickness), eval(density))
-		elif noseType.lower() == noseTypes[1]:  # Dome
+		elif noseType.lower() == noseTypes[1]:  # Hemisphere
 			diameter = find_parameter(file, "diameter")
 			thickness = find_parameter(file, "thickness")
 			density = find_parameter(file, "density")
@@ -171,7 +171,6 @@ class Nose:
 			for string in noseTypes:
 				print("\t" + string)
 			exit(1)
-
 
 class Body:
 
@@ -366,6 +365,9 @@ class Motor:
 			return self.__propellantMassFunction(t) + self.__frameMass
 
 	def getInertiaMatrix(self, t):
+		"""
+		return the moment of inertia about principle axes with origin at COM
+		"""
 		frameMass = self.__frameMass
 		if t >= self.__timeArray[-1]:
 			propMass = 0
@@ -373,15 +375,24 @@ class Motor:
 			propMass = self.__initialPropellantMass
 		else:
 			propMass = self.__propellantMassFunction(t)
-		R = self.getDiameter()/2
-		Rfuel = R - 3e-3  # Radius of solid fuel cylinder
-		l = self.getLength()
-		Ixx = frameMass*R**2 + 1/2*propMass*Rfuel**2
-		Iyy = 1/12*frameMass*l**2 + 1/12*propMass*(propMass/self.__initialPropellantMass*l)**2
+
+		r0 = self.getDiameter()/2
+		h = self.getLength
+		fuelMassRatio = propMass/self.__initialPropellantMass
+		Ixx = frameMass*r0**2 + propMass*(r0**2)/2*(2 - fuelMassRatio)
+		Iyy = propMass*((h**2)/12 + 1/4*(r0**2)*(2 - fuelMassRatio))
+		+ frameMass*((h**2)/12 + 1/4*(r0**2))
 		Izz = Iyy
 		return np.diag([Ixx, Iyy, Izz])
+		#TODO implement MOI for motor with axial fuel burn.
 
-	def getCOM(self, t):
+	def getCOM(self, t, fuelBurnRadially=True):
+
+		l = self.__length
+		# If fuel burns radially, quickly return the well know solution (relative to top of motor)
+		if fuelBurnRadially:
+			return -l/2
+
 		frameMass = self.__frameMass
 		propMass = self.__initialPropellantMass
 		if t < self.__timeArray[0]:
@@ -393,7 +404,6 @@ class Motor:
 			propMass = self.__propellantMassFunction(t)
 			Mtot = propMass + frameMass
 
-		l = self.__length
 		return -1/Mtot*(frameMass + propMass**2/self.__initialPropellantMass)*l/2  # COM relative to top of motor
 
 	def getLength(self):
@@ -413,10 +423,8 @@ class Motor:
 	def getTotalImpulse(self):
 		return self.__totalImpulse
 
-	# Set functions
 
 	# Auxiliary functions
-
 	def thrust(self, t):
 		if t <= self.__burnTime:
 			return self.__thrustFunction(t)
@@ -426,37 +434,36 @@ class Motor:
 	def massFlow(self, t):
 		return self.thrust(t)/self.__exhaustSpeed
 
-#	def plotPerformance(self):
-#		dt = self.__burnTime/1e4
-#		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
-#		thrustArray = self.__thrustFunction(timeList)
-#		propellantMassArray = self.__propellantMassList
-#		COMarray = np.array([self.getCOM(t) for t in timeList])
-#		# PLOT FORCE
-#		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
-#		plt.title(r'Thrust during burn phase of $\textbf{%s}$'%self.__name)
-#		plt.ylabel('thrust [N]')
-#		plt.xlabel('time [s]')
-#		plt.grid()
-#		plt.legend(loc='best')
-#		plt.show()
-#		# PLOT PROPELLANT MASS LOSS
-#		plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
-#		plt.title('Fuel mass during burn phase')
-#		plt.ylabel('mass [kg]')
-#		plt.xlabel('time [s]')
-#		plt.grid()
-#		plt.legend(loc='best')
-#		plt.subplots_adjust(hspace=0.7)
-#		plt.show()
+	def plotPerformance(self):
+		dt = self.__burnTime/1e4
+		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
+		thrustArray = self.__thrustFunction(timeList)
+		propellantMassArray = self.__propellantMassList
+		COMarray = np.array([self.getCOM(t) for t in timeList])
+		# PLOT FORCE
+		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
+		plt.title(r'Thrust during burn phase of %s' %self.__name)
+		plt.ylabel('thrust [N]')
+		plt.xlabel('time [s]')
+		plt.grid()
+		plt.legend(loc='best')
+		plt.show()
+		# PLOT PROPELLANT MASS LOSS
+		plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
+		plt.title('Propellant mass during burn phase')
+		plt.ylabel('mass [kg]')
+		plt.xlabel('time [s]')
+		plt.grid()
+		plt.legend(loc='best')
+		plt.show()
 		# PLOT COM OVER TIME
-#		plt.plot(timeList, COMarray, label='COM', c='r', lw='2')
-#		plt.title(r'COM of $\textbf{%s}$ during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
-#		plt.ylabel('position [m]')
-#		plt.xlabel('time [s]')
-#		plt.grid()
-#		plt.legend(loc='best')
-#		plt.show()
+		plt.plot(timeList, COMarray, label='COM', c='r', lw='2')
+		plt.title('COM of %s during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
+		plt.ylabel('position [m]')
+		plt.xlabel('time [s]')
+		plt.grid()
+		plt.legend(loc='best')
+		plt.show()
 
 	@staticmethod
 	def from_file(motorFile):
@@ -474,7 +481,7 @@ class Motor:
 		totalImpulse = find_parameter(motorFile, "total_impulse")
 		motorFile = open(motorFile, 'r')
 
-		thrust = []
+		thrust = [[0, 0]]
 		with motorFile as fp:
 			for i, line in enumerate(fp):
 				if i > 5:
@@ -551,10 +558,10 @@ class RocketSimple:
 		# Nose COP
 		print("\tCalculating rocket COP (relative to rocket origin)..")
 		Xnose = 0
-		CNnose = 2
+		CNnose = 2  # Barrowman
 		if nose.getNoseType() == noseTypes[0]:  # Conic
 			Xnose = -0.666*nose.getLength()
-		elif nose.getNoseType() == noseTypes[1]:  # Dome
+		elif nose.getNoseType() == noseTypes[1]:  # Hemisphere
 			Xnose = -0.446*nose.getLength()
 		self.__noseCOP = Xnose
 
@@ -674,7 +681,7 @@ class RocketSimple:
 		print("Rocket Specifications at time %1.1f" % t)
 		print(dots)
 		print("Mass: %1.2f kg" % Mass)
-		print("Moment of inertia (about rocket axes with COM as origin) [kgm^2]:")
+		print("Moment of inertia (about rocket axes with COM as origin) [kgm²]:")
 		print(np.array2string(MOI, precision=3))
 		print("Length: %1.2f m" % length)
 		print("Width: %1.2f m" % width)
@@ -701,7 +708,7 @@ class RocketSimple:
 								- myRocket.dot   <--  rocket file!
 				 If this folder is located in the current working folder, you can simply create an instance of this
 				 rocket with:
-				 		 myRocket = RocketSimple.from_file('myRocket.dot', 'myRocket/')
+				 		 myRocket = RocketSimple.from_file('myRocket.dot', 'myRocket')
 		:param path_to_file: [string] a path to the rocket file relative to the current path (empty by default)
 		:param rocket_file: [string] name of rocket file
 		:return: [RocketSimple class] Rocket instance with specs from rocket file.
@@ -727,18 +734,3 @@ class RocketSimple:
 		payload = Payload.from_file(path + payloadFile)
 
 		return RocketSimple(nose, body, fin, eval(numberOfFins), motor, payload, partsPlacement)
-
-
-def find_parameter(file, parameter):
-	File = open(file, 'r')
-	arr = ["", ""]
-	while arr[0] != parameter.lower():
-		base = File.readline()
-		if base == '':
-			print("ERROR: Could not find parameter '" + parameter + "' in '" + file + "'.")
-			return False
-		base = base.replace(" ", "")
-		base = base.replace("\n", "")
-		arr = base.split("=")
-	File.close()
-	return arr[1]

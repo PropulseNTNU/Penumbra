@@ -1,4 +1,0 @@
-Name		Reason
---------------------------------------------------
-Umbral		Threshold in spanish
-Dot		From dot, as in derivative
