@@ -2,7 +2,7 @@
 Rocket module - The definition of the rocket and its constituent parts
 
 Version: WIP
-Last edit: 26.10.2018
+Last edit: 27.10.2018
 
 --Propulse NTNU--
 """
@@ -10,6 +10,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import simps
 from scipy.interpolate import interp1d
+
+# Define some things for plotting
+font = { 'family': 'normal', 'weight': 'bold', 'size': 16 }
+plt.rc( 'font', **font )
+plt.rc( 'text', usetex=True )
+plt.rcParams[ 'text.latex.preamble' ] = [ r'\boldmath' ]
 
 # Geometry types
 noseTypes = ['conic', 'dome']
@@ -34,22 +40,16 @@ class Nose:
 		print("Nose initialized!")
 
 	def __str__(self):
-
+		D = str(self.__diameter)
+		d = str(self.__thickness*1e3)
+		m = str(round(self.getMass(), 2))
+		rho = str(self.__density)
 		if self.__noseType == noseTypes[0]:  # Conic
-			D = str(self.__diameter)
 			h = str(self.__height)
-			d = str(self.__thickness*1e3)
-			m = str(round(self.getMass(), 2))
-			rho = str(self.__density)
 			return "Diameter: " + D + " m\n" + "Height: " + h + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
-
 		elif self.__noseType == noseTypes[1]:  # Dome
-			D = str(self.__diameter)
-			d = str(self.__thickness*1e3)
-			m = str(round(self.getMass(), 2))
-			rho = str(self.__density)
-			return "Diameter: " + D + " m\n" + "Thickness: " + d + " mm\n\n" + "Mass: " + m + \
+			return "Diameter: " + D + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
 
 	# Member functions
@@ -84,6 +84,9 @@ class Nose:
 	def getMass(self):
 		return self.__density*self.getVolume()
 
+	def getNoseType(self):
+		return self.__noseType
+
 	def getCOM(self):
 		if self.__noseType == noseTypes[0]:
 			V = self.getVolume()
@@ -107,12 +110,12 @@ class Nose:
 			height = find_parameter(file, "height")
 			density = find_parameter(file, "density")
 			thickness = find_parameter(file, "thickness")
-			return Nose(eval(noseType.lower()), eval(diameter), eval(height), eval(thickness), eval(density))
+			return Nose(noseType.lower(), eval(diameter), eval(height), eval(thickness), eval(density))
 		elif noseType.lower() == noseTypes[1]:
 			diameter = find_parameter(file, "diameter")
 			thickness = find_parameter(file, "thickness")
 			density = find_parameter(file, "density")
-			return Nose(eval(noseType.lower()), eval(diameter), eval(thickness), eval(density))
+			return Nose(noseType.lower(), eval(diameter), eval(thickness), eval(density))
 		else:
 			print("ERROR: invalid nose type encountered at initialization. Please check your spelling.")
 			exit(1)
@@ -200,8 +203,17 @@ class Fin:
 		d = self.__thickness
 		return 1/2*(l1 + l2)*cord*d
 
-	def getLength(self):
+	def getRootChord(self):
 		return self.__rootChord
+
+	def getTipChord(self):
+		return self.__tipChord
+
+	def getSemiChord(self):
+		return self.__semiChord
+
+	def getTopEdgeAngle(self):
+		return self.__angle
 
 	def getMass(self):
 		return self.__density*self.getVolume()
@@ -213,22 +225,19 @@ class Fin:
 		a = self.__angle
 		return -(cord/np.tan(a) + 3/4*(l2 - l1))  # COM relative to top edge of fin
 
-	def getCOP(self):
-		lr = self.__rootChord
-		lt = self.__tipChord
-
 	@staticmethod
 	def from_file(file):
-		cord = find_parameter(file, "cord")
-		length1 = find_parameter(file, "length1")
-		length2 = find_parameter(file, "length2")
-		angle = find_parameter(file, "angle")
+		semiChord = find_parameter(file, "semi_chord")
+		rootChord = find_parameter(file, "root_chord")
+		tipChord = find_parameter(file, "tip_chord")
+		angle = find_parameter(file, "root_angle")
 		density = find_parameter(file, "density")
 		thickness = find_parameter(file, "thickness")
-		return Fin(eval(cord), eval(length1), eval(length2), eval(angle), eval(thickness), eval(density))
+		return Fin(eval(semiChord), eval(rootChord), eval(tipChord), eval(angle), eval(thickness), eval(density))
 
 
 class Motor:
+
 
 	def __init__(self, *args):
 		self.__name = args[0]
@@ -242,12 +251,12 @@ class Motor:
 		print("Interpolating thrust data...")
 		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray)  # Linear Interpolation for thrust curve
 		print("Calculating total impulse...")
-		self.__totalImpulse = round(simps(self.__thrustArray, self.__timeArray), 3)
-		print("\tTotal impulse: %1.2f Ns" % self.__totalImpulse)
+		self.__totalImpulse = round(simps(self.__thrustArray, self.__timeArray), 4)
+		print("\tTotal impulse: %1.1f Ns" % self.__totalImpulse)
 		self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
 		self.__burnTime = self.__timeArray[-1]
-		self.__avgThrust = round(self.__totalImpulse/self.__burnTime, 3)
-		dt = self.__burnTime/1e4  # This is usually in order of milli seconds
+		self.__avgThrust = round(self.__totalImpulse/self.__burnTime, 4)
+		dt = self.__burnTime/1e4  # This is usually in the order of 100 micro seconds (time step).
 		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
 		iterations = len(timeList)
 		propellantMass = self.__initialPropellantMass
@@ -262,14 +271,15 @@ class Motor:
 		print("Motor %s initialized!\n" % self.__name)
 
 	def __str__(self):
-		I = str(self.__totalImpulse/1e3)
-		avg = str(self.__avgThrust)
+		I = str(round(self.__totalImpulse/1e3, 4))
+		avg = str(round(self.__avgThrust/1e3, 4))
 		timeMax, Tmax = self.getMaxThrust()
 		bTime = self.__burnTime
 		name = self.getName()
-		sep = (len(name) + 7)*'_'
+		sep = (len(name) + 10)*'-'
 		return "Motor: " + name + "\n" + sep + "\nTotal impulse: " + I + " kNs\n" + "Average thrust: " + avg + " kN" + \
-			   "Maximum thrust: " + str(Tmax/1e3) + " kN,\tat time " + timeMax + " s\n" + "Burntime: " + bTime + "s \n"
+			   "\nMaximum thrust: " + str(Tmax/1e3) + " kN,\tat time " + str(timeMax) + " s\n" + "Burntime: " + \
+			   str(bTime) + " s\n"
 
 	# Get functions
 	def getName(self):
@@ -320,7 +330,7 @@ class Motor:
 		# PLOT FORCE
 		plt.subplot(211)
 		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
-		plt.title('Thrust during burn phase')
+		plt.title(r'Thrust during burn phase of $\textbf{%s}$' % self.__name)
 		plt.ylabel('thrust [N]')
 		plt.xlabel('time [s]')
 		plt.grid()
@@ -338,7 +348,7 @@ class Motor:
 		plt.show()
 
 	@staticmethod
-	def from_motorFile(motorFile):
+	def from_file(motorFile):
 		"""
 			Read a file with motor specs.
 			ASSUMPTIONS: -
@@ -366,32 +376,31 @@ class Motor:
 
 class Payload:
 
-	def __init__(self, mass, placement, name="Bertha"):
+	def __init__(self, mass=4, name="Bertha"):
 		self.__mass = mass
 		# Assuming placement is COM relative to body top
-		self.__placement = placement
 		self.__name = name
+
+	def getNane(self):
+		return self.__name
 
 	def getMass(self):
 		return self.__mass
 
-	def getCOM(self):
-		return self.__placement  # Assuming placement is position of COM
-
 	@staticmethod
 	def from_file(file, name):
 		mass = find_parameter(file, "mass")
-		placement = find_parameter(file, "placement")
-		return Payload(eval(mass), eval(placement), name)
+		return Payload(eval(mass), name)
 
 
-# TODO: implement COP and Inertia tensor for each part
+# TODO: implement Inertia tensor for each part
 # TODO: Placement of relevant rocket parts can be solved by specifying placement in rocket file
 
 
 class RocketSimple:
 
-	def __init__(self, nose, body, fin, motor, payload, partsPlacement):
+	def __init__(self, nose, body, fin, numberOfFins, motor, payload, partsPlacement):
+		print("Calculating rocket mass..")
 		self.__rocketParts = np.array([nose, body, fin, payload])
 		self.__rocketMotor = motor
 		self.__massOfRocketParts = np.array([part.getMass() for part in self.__rocketParts])
@@ -399,6 +408,9 @@ class RocketSimple:
 		self.__motorMass = self.__rocketMotor.getMass(0)
 		# TOTAL MASS
 		self.__mass = self.__rocketMass + self.__motorMass
+
+		# COM
+		print("Calculating rocket COM (relative to rocket origin)..")
 		self.__noseCOM = nose.getCOM() - nose.getLength()
 		self.__bodyCOM = body.getCOM() - body.getLength() - nose.getLength()
 		# Assuming placement of fin is position of top edge relative to body top
@@ -409,8 +421,38 @@ class RocketSimple:
 		self.__COMofRocketParts = np.array([self.__noseCOM, self.__bodyCOM, self.__finCOM,
 											self.__payloadCOM])
 		self.__rocketCOM = (self.__massOfRocketParts*self.__COMofRocketParts).sum()/self.__rocketMass
+
 		# FINAL COM OF ROCKET
 		self.__COM = (self.__rocketCOM*self.__rocketMass + self.__motorCOM*self.__motorMass)/self.__mass
+
+		# Nose COP
+		print("Calculating rocket COP (relative to rocket origin)..")
+		Xnose = 0
+		CNnose = 2
+		if nose.getNoseType() == noseTypes[0]:  # Conic
+			Xnose = -0.666*nose.getLength()
+		elif nose.getNoseType() == noseTypes[1]:  # Dome
+			Xnose = -0.446*nose.getLength()
+		self.__noseCOP = Xnose
+
+		# Fin COP
+		self.__N = numberOfFins  # Number of fins on rocket
+		R = body.getDiameter()/2  # Radius of body
+		SC = fin.getSemiChord()  # Semi chord of fins
+		RC = fin.getRootChord()
+		TC = fin.getTipChord()
+		alpha = fin.getTopEdgeAngle()*np.pi/180.0
+		Lf = np.sqrt(SC**2 + (SC/np.tan(alpha) + 1/2*(TC - RC))**2)
+		CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/2*R)**2/(1 + np.sqrt(1 + (2*Lf/(RC + TC))**2)))
+		Xb = partsPlacement[0] - nose.getLength()
+		Xr = -SC/np.tan(alpha)
+		Xf = Xb + Xr/3*(RC + 2*TC)/(RC + TC) - 1/6*((RC + TC) - RC*TC/(RC + TC))
+		self.__finCOP = Xf
+
+		# FINAL ROCKET COP
+		CNrocket = CNnose + CNfin
+		self.__COP = (CNnose*Xnose + CNfin*Xf)/CNrocket
+		print("Rocket initialized!")
 
 	def getNose(self):
 		return self.__rocketParts[0]
@@ -438,6 +480,9 @@ class RocketSimple:
 		self.__COM = (self.__rocketCOM*self.__rocketMass + motorCOM*motorMass)/mass
 		return self.__COM
 
+	def getCOP(self):
+		return self.__COP
+
 	@staticmethod
 	def from_file(file):
 		pass
@@ -457,5 +502,6 @@ def find_parameter(file, parameter):
 	File.close()
 	return arr[1]
 
-motor = Motor.from_motorFile('motor.dot')
-motor.plotPerformance()
+Nose = Nose.from_file('test.dot', 'conic')
+Fin = Fin.from_file('fin.dot')
+print(Fin)
