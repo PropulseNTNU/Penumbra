@@ -321,7 +321,7 @@ class Motor:
 		plt.suptitle(self.getName())
 		plt.subplot(211)
 		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
-		plt.title('Fuel mass during burn phase')
+		plt.title('Thrust during burn phase')
 		plt.ylabel('thrust [N]')
 		plt.xlabel('time [s]')
 		plt.grid()
@@ -329,7 +329,7 @@ class Motor:
 		# PLOT PROPELLANT MASS LOSS
 		plt.subplot(212)
 		plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
-		plt.title('Fuel mass during burn phase')
+		plt.title('Propellant mass during burn phase')
 		plt.ylabel('mass [kg]')
 		plt.xlabel('time [s]')
 		plt.grid()
