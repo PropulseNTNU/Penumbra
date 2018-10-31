@@ -1,13 +1,14 @@
 import numpy as np
 import scipy.linalg as splinalg
 import scipy.integrate as spintegrate
+import ForceModule.Forces
 
 g = 9.81
 #Rocket module
 class SimpleRocketModel:
     def __init__(self):
         self.height = 5
-        self.diameter = 0.5
+        self.radius = 0.25
         self.dragCoefficient = 1
         self.liftCoefficient = 1
 

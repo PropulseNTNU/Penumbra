@@ -42,7 +42,12 @@ def thrust(rocket, t):
 	:param t: [float] point in time [s]
 	:return: [np.array] thrust force at time t in rocket frame
 	"""
+<<<<<<< HEAD:Force/Forces.py
 	return np.array([rocket.getMotor().thrust(t), 0, 0])
+=======
+	Thrust = rocket.getMotor().thrust(t)
+	return np.array([Thrust, 0, 0])
+>>>>>>> New trajectory branch:ForceModule/Forces.py
 
 
 def SAMdrag(rocket, position, linearVelocity):
@@ -73,5 +78,9 @@ def SAMmoment(rocket, drag):
 	:return: [np.array] The moment created by Drag about CM of the rocket in rocket coordinates
 	"""
 	r = rocket.getCOP() - rocket.getCOM()
+<<<<<<< HEAD:Force/Forces.py
 	return np.cross(r, drag)
 >>>>>>> Added total_impulse to motor files. Added new:ForceModule/Forces.py
+=======
+	return np.cross(r,SAMdrag(rocket, state))
+>>>>>>> New trajectory branch:ForceModule/Forces.py
