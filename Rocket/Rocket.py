@@ -12,10 +12,10 @@ from scipy.integrate import simps
 from scipy.interpolate import interp1d
 
 # Define some things for plotting
-font = { 'family': 'normal', 'weight': 'bold', 'size': 16 }
-plt.rc( 'font', **font )
-plt.rc( 'text', usetex=True )
-plt.rcParams[ 'text.latex.preamble' ] = [ r'\boldmath' ]
+font = {'family': 'normal', 'weight': 'bold', 'size': 16}
+plt.rc('font', **font)
+plt.rc('text', usetex=True)
+plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 # Geometry types
 noseTypes = ['conic', 'dome']
@@ -30,11 +30,12 @@ class Nose:
 
 		if noseType == noseTypes[0]:  # Conic
 			self.__diameter = args[0]
-			self.__height = args[1]
+			self.__length = args[1]
 			self.__thickness = args[2]
 			self.__density = args[3]
 		elif noseType == noseTypes[1]:  # Dome
 			self.__diameter = args[0]
+			self.__length = self.__diameter/2
 			self.__thickness = args[1]
 			self.__density = args[2]
 		print("Nose initialized!")
@@ -45,7 +46,7 @@ class Nose:
 		m = str(round(self.getMass(), 2))
 		rho = str(self.__density)
 		if self.__noseType == noseTypes[0]:  # Conic
-			h = str(self.__height)
+			h = str(self.__length)
 			return "Diameter: " + D + " m\n" + "Height: " + h + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + \
 				   " kg\n" + "Density: " + rho + " kgm^-3"
 		elif self.__noseType == noseTypes[1]:  # Dome
@@ -57,7 +58,7 @@ class Nose:
 		if self.__noseType == noseTypes[0]:  # Conic
 			d = self.__thickness
 			R2 = self.__diameter/2  # Outer radius of cone
-			H2 = self.__height
+			H2 = self.__length
 			H1 = H2 - d
 			R1 = R2*H1/H2
 			return np.pi/3*(H2*R2**2 - H1*R1**2)
@@ -68,21 +69,41 @@ class Nose:
 			return 2/3*np.pi*(R2**3 - R1**3)
 
 	def getCavityVolum(self):
-		d = self.__thickness
-		R2 = self.__diameter/2  # Outer radius of cone
-		H2 = self.__height
-		H1 = H2 - d
-		R1 = R2*H1/H2
-		return np.pi/3*H1*R1**2
+		if self.__noseType == noseTypes[0]:  # Conic
+			d = self.__thickness
+			R2 = self.__diameter/2  # Outer radius of cone
+			H2 = self.__length
+			H1 = H2 - d
+			R1 = R2*H1/H2
+			return np.pi/3*H1*R1**2
+		elif self.__noseType == noseTypes[1]:  # Dome
+			d = self.__thickness
+			R2 = self.__diameter/2
+			R1 = R2 - d
+			return 2/3*np.pi*R1**3
 
 	def getLength(self):
 		if self.__noseType == noseTypes[0]:
-			return self.__height
+			return self.__length
 		elif self.__noseType == noseTypes[1]:
 			return self.__diameter/2
 
 	def getMass(self):
 		return self.__density*self.getVolume()
+
+	def getInertiaMatrix(self):
+		if self.__noseType == noseTypes[0]:  # Conic
+			r = self.__diameter/2
+			Ixx = 1/2*self.getMass()*r**2
+			Iyy = 3*Ixx
+			Izz = Iyy
+			return np.diag([Ixx, Iyy, Izz])
+		elif self.__noseType == noseTypes[1]:
+			r = self.__diameter/2
+			Ixx = 2/3*self.getMass()*r**2
+			Iyy = 3*Ixx
+			Izz = 3*Iyy
+			return np.diag([Ixx, Iyy, Izz])
 
 	def getNoseType(self):
 		return self.__noseType
@@ -92,7 +113,7 @@ class Nose:
 			V = self.getVolume()
 			d = self.__thickness
 			R2 = self.__diameter/2  # Outer radius of cone
-			H2 = self.__height
+			H2 = self.__length
 			H1 = H2 - d
 			R1 = R2*H1/H2
 			a = 1/2*H2**2 - 2*H2**3/(3*H1) + H2**4/(4*H1**2)
@@ -107,17 +128,18 @@ class Nose:
 	def from_file(file, noseType):
 		if noseType.lower() == noseTypes[0]:  # Conic
 			diameter = find_parameter(file, "diameter")
-			height = find_parameter(file, "height")
+			length = find_parameter(file, "length")
 			density = find_parameter(file, "density")
 			thickness = find_parameter(file, "thickness")
-			return Nose(noseType.lower(), eval(diameter), eval(height), eval(thickness), eval(density))
-		elif noseType.lower() == noseTypes[1]:
+			return Nose(noseType.lower(), eval(diameter), eval(length), eval(thickness), eval(density))
+		elif noseType.lower() == noseTypes[1]:  # Dome
 			diameter = find_parameter(file, "diameter")
 			thickness = find_parameter(file, "thickness")
 			density = find_parameter(file, "density")
 			return Nose(noseType.lower(), eval(diameter), eval(thickness), eval(density))
 		else:
-			print("ERROR: invalid nose type encountered at initialization. Please check your spelling.")
+			print("ERROR: invalid nose type '" + noseType + "' encountered at initialization. "
+															"Please check your spelling.")
 			exit(1)
 
 
@@ -161,6 +183,15 @@ class Body:
 
 	def getMass(self):
 		return self.__density*self.getVolume()
+
+	def getInertiaMatrix(self):
+		r = self.__diameter/2
+		l = self.__length
+		m = self.getMass()
+		Ixx = m*r**2
+		Iyy = 1/3*m*l**2
+		Izz = Iyy
+		return np.diag([Ixx, Iyy, Izz])
 
 	def getCOM(self):
 		l = self.__length
@@ -238,7 +269,6 @@ class Fin:
 
 class Motor:
 
-
 	def __init__(self, *args):
 		self.__name = args[0]
 		self.__thrustMatrix = args[1]
@@ -263,7 +293,7 @@ class Motor:
 		massFlow = self.__thrustFunction(timeList)/self.__exhaustSpeed
 		self.__propellantMassList = np.zeros(iterations)
 		self.__propellantMassList[0] = propellantMass
-		print("Calculating mass loss over the burn time of %1.2f s..."%self.__burnTime)
+		print("Calculating mass loss over the burn time of %1.2f s..." % self.__burnTime)
 		for i in range(iterations - 1):
 			propellantMass -= dt/2*(massFlow[i] + massFlow[i + 1])  # Trapezoid rule for integration of mdot over time
 			self.__propellantMassList[i + 1] = propellantMass
@@ -271,14 +301,14 @@ class Motor:
 		print("Motor %s initialized!\n" % self.__name)
 
 	def __str__(self):
-		I = str(round(self.__totalImpulse/1e3, 4))
-		avg = str(round(self.__avgThrust/1e3, 4))
+		I = str(round(self.__totalImpulse, 2))
+		avg = str(round(self.__avgThrust, 2))
 		timeMax, Tmax = self.getMaxThrust()
 		bTime = self.__burnTime
 		name = self.getName()
 		sep = (len(name) + 10)*'-'
-		return "Motor: " + name + "\n" + sep + "\nTotal impulse: " + I + " kNs\n" + "Average thrust: " + avg + " kN" + \
-			   "\nMaximum thrust: " + str(Tmax/1e3) + " kN,\tat time " + str(timeMax) + " s\n" + "Burntime: " + \
+		return "Motor: " + name + "\n" + sep + "\nTotal impulse: " + I + " Ns\n" + "Average thrust: " + avg + " N" + \
+			   "\nMaximum thrust: " + str(Tmax) + " N,\tat time " + str(timeMax) + " s\n" + "Burntime: " + \
 			   str(bTime) + " s\n"
 
 	# Get functions
@@ -378,10 +408,9 @@ class Payload:
 
 	def __init__(self, mass=4, name="Bertha"):
 		self.__mass = mass
-		# Assuming placement is COM relative to body top
 		self.__name = name
 
-	def getNane(self):
+	def getName(self):
 		return self.__name
 
 	def getMass(self):
@@ -393,6 +422,7 @@ class Payload:
 		return Payload(eval(mass), name)
 
 
+# TODO: Substitute Conic nose with Von Karman nose
 # TODO: implement Inertia tensor for each part
 # TODO: Placement of relevant rocket parts can be solved by specifying placement in rocket file
 
@@ -401,29 +431,33 @@ class RocketSimple:
 
 	def __init__(self, nose, body, fin, numberOfFins, motor, payload, partsPlacement):
 		print("Calculating rocket mass..")
-		self.__rocketParts = np.array([nose, body, fin, payload])
+		self.__partsPlacement = partsPlacement
+		self.__rocketStructure = np.array([nose, body, fin, payload])
 		self.__rocketMotor = motor
-		self.__massOfRocketParts = np.array([part.getMass() for part in self.__rocketParts])
-		self.__rocketMass = self.__massOfRocketParts.sum()
+		self.__massOfRocketStructure = np.array([part.getMass() for part in self.__rocketStructure])
+		self.__rocketMass = self.__massOfRocketStructure.sum()
 		self.__motorMass = self.__rocketMotor.getMass(0)
 		# TOTAL MASS
 		self.__mass = self.__rocketMass + self.__motorMass
 
+		# MOMENT OF INERTIA
+
+
 		# COM
 		print("Calculating rocket COM (relative to rocket origin)..")
 		self.__noseCOM = nose.getCOM() - nose.getLength()
-		self.__bodyCOM = body.getCOM() - body.getLength() - nose.getLength()
+		self.__bodyCOM = body.getCOM() - nose.getLength()
 		# Assuming placement of fin is position of top edge relative to body top
 		self.__finCOM = partsPlacement[0] + fin.getCOM() - nose.getLength()
 		# Assuming placement of motor is position of motor top relative to body top
 		self.__motorCOM = partsPlacement[1] + motor.getCOM(0) - nose.getLength()
-		self.__payloadCOM = partsPlacement[2]
-		self.__COMofRocketParts = np.array([self.__noseCOM, self.__bodyCOM, self.__finCOM,
+		# Assuming placement of payload is its COM relative to body top
+		self.__payloadCOM = partsPlacement[2] - nose.getLength()
+		self.__COMofRocketStructure = np.array([self.__noseCOM, self.__bodyCOM, self.__finCOM,
 											self.__payloadCOM])
-		self.__rocketCOM = (self.__massOfRocketParts*self.__COMofRocketParts).sum()/self.__rocketMass
-
+		self.__rocketStructureCOM = (self.__massOfRocketStructure*self.__COMofRocketStructure).sum()/self.__rocketMass
 		# FINAL COM OF ROCKET
-		self.__COM = (self.__rocketCOM*self.__rocketMass + self.__motorCOM*self.__motorMass)/self.__mass
+		self.__COM = (self.__rocketStructureCOM*self.__rocketMass + self.__motorCOM*self.__motorMass)/self.__mass
 
 		# Nose COP
 		print("Calculating rocket COP (relative to rocket origin)..")
@@ -452,36 +486,66 @@ class RocketSimple:
 		# FINAL ROCKET COP
 		CNrocket = CNnose + CNfin
 		self.__COP = (CNnose*Xnose + CNfin*Xf)/CNrocket
+		# TOTAL LENGTH OF ROCKET
+		self.__length = nose.getLength() - partsPlacement[0] + SC/np.tan(alpha) + TC
+		# MAXIMAL WIDTH OF ROCKET
+		self.__width = body.getDiameter() + 2*SC
+		# FORCE COEFFICIENTS
+		self.__Cd = 1
+		self.__Cl = 0.1
 		print("Rocket initialized!")
 
+	# Rocket parts
 	def getNose(self):
-		return self.__rocketParts[0]
+		return self.__rocketStructure[0]
 
 	def getBody(self):
-		return self.__rocketParts[1]
+		return self.__rocketStructure[1]
 
 	def getFin(self):
-		return self.__rocketParts[2]
+		return self.__rocketStructure[2]
 
 	def getMotor(self):
 		return self.__rocketMotor
 
 	def getPayload(self):
-		return self.__rocketParts[3]
+		return self.__rocketStructure[3]
 
+	# Rocket structure
 	def getMass(self, t):
 		self.__mass = self.__rocketMass + self.__rocketMotor.getMass(t)
 		return self.__mass
 
+	def getLength(self):
+		return self.__length
+
+	def getWidth(self):
+		return self.__width
+
 	def getCOM(self, t):
 		mass = self.getMass(t)
-		motorCOM = self.getMotor().getCOM(t)
+		self.__motorCOM = self.__partsPlacement[1] + self.__rocketMotor.getCOM(t) - self.__rocketStructure[0].getLength()
 		motorMass = self.getMotor().getMass(t)
-		self.__COM = (self.__rocketCOM*self.__rocketMass + motorCOM*motorMass)/mass
+		self.__COM = (self.__rocketStructureCOM*self.__rocketMass + self.__motorCOM*motorMass)/mass
 		return self.__COM
 
+	# Aerodynamics
 	def getCOP(self):
 		return self.__COP
+
+	def getCd(self):
+		return self.__Cd
+
+	def getCl(self):
+		return self.__Cl
+
+	#Set functions
+	def setCd(self, Cd):
+		self.__Cd = Cd
+
+	def setCl(self, Cl):
+		self.__Cl = Cl
+
 
 	@staticmethod
 	def from_file(file):
@@ -502,6 +566,8 @@ def find_parameter(file, parameter):
 	File.close()
 	return arr[1]
 
+
 Nose = Nose.from_file('test.dot', 'conic')
 Fin = Fin.from_file('fin.dot')
 print(Fin)
+print(Nose)
