@@ -1,12 +1,16 @@
 import numpy as np
 import scipy.linalg as splinalg
 import scipy.integrate as spintegrate
+<<<<<<< 4672bb4ad7dcb8c28028bd8a3e0473461a1113dd:Trajectory/Trajectory.py
 <<<<<<< HEAD:Trajectory/trajectory.py
 import ForceModule.Forces
 =======
 import Rocket.Rocket as RockMod
 import Force.Forces as Forces
 >>>>>>> Test module started:Trajectory/Trajectory.py
+=======
+import ForceModule.Forces
+>>>>>>> New trajectory branch:Trajectory/trajectory.py
 
 g = 9.81
 #Rocket module

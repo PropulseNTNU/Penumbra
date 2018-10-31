@@ -38,7 +38,12 @@ def thrust(rocket, t):
 	:param t: [float] point in time [s]
 	:return: [np.array] thrust force at time t in rocket frame
 	"""
+<<<<<<< 4672bb4ad7dcb8c28028bd8a3e0473461a1113dd
 	return np.array([rocket.getMotor().thrust(t), 0, 0])
+=======
+	Thrust = rocket.getMotor().thrust(t)
+	return np.array([Thrust, 0, 0])
+>>>>>>> New trajectory branch
 
 
 def SAMdrag(rocket, position, linearVelocity):
@@ -67,4 +72,8 @@ def SAMmoment(rocket, drag):
 	:return: [np.array] The moment created by Drag about CM of the rocket in rocket coordinates
 	"""
 	r = rocket.getCOP() - rocket.getCOM()
+<<<<<<< 4672bb4ad7dcb8c28028bd8a3e0473461a1113dd
 	return np.cross(r, drag)
+=======
+	return np.cross(r,SAMdrag(rocket, state))
+>>>>>>> New trajectory branch
