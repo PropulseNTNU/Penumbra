@@ -7,7 +7,7 @@ Last edit: 23.10.2018
 --Propulse NTNU--
 """
 import numpy as np
-from Rocket.Rocket import RocketSimple, find_parameter
+from Rocket.Rocket import find_parameter
 from scipy.constants import R, g
 
 #Constants
@@ -19,17 +19,18 @@ h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 
 # Forces
 
-def gravity(rocket):
+def gravity(rocket, t):
 
 	"""
 	Gravitational force on the rocket
-	Assumptions:- Homogenous gravity field in -z direction
+	Assumptions:- Homogeneous gravity field in -z direction
 				- g to be a constant (very good approx. up to 3000 m, off by 0.1%)
 
 	:param rocket: [rocket class] The rocket object
+	:param t: [float] point in time [s]
 	:return: [np.array] gravity vector in the inertial frame [N].
 	"""
-	return np.array([0,0,-rocket.getMass()*g])
+	return np.array([0,0,-rocket.getMass(t)*g])
 
 
 def thrust(rocket, t):
@@ -52,20 +53,8 @@ def SAMdrag(rocket, position, linearVelocity):
 	"""
 	z = position[2] # Vertical position of rocket
 	Cd = rocket.getCd()
-	Aref = np.pi*(rocket.body.getDiameter()/2)**2
+	Aref = np.pi*(rocket.getBody().getDiameter()/2)**2
 	k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
 
 	return -k*np.linalg.norm(linearVelocity)*linearVelocity
-
-
-# Torques
-
-def SAMmoment(rocket, drag):
-	"""
-	:param rocket: [rocket class] The rocket object
-	:param drag: [np.array] The current drag in rocket coordinates
-	:return: [np.array] The moment created by Drag about CM of the rocket in rocket coordinates
-	"""
-	r = rocket.getCOP() - rocket.getCOM()
-	return np.cross(r, drag)
 

@@ -1,0 +1,13 @@
+Parts:
+nose = myNose.dot
+body = myBody.dot
+fin = myFin.dot
+motor = CesaroniM1800.dot
+payload = myPayload.dot
+
+Number of fins:
+number_of_fins = 4
+
+Part placement:
+fin_placement = -150e-2
+payload_placement = -40e-2
