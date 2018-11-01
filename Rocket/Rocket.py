@@ -1,14 +1,13 @@
 """
 Rocket module - The definition of the rocket and its constituent parts
 
-Version: WIP
-Last edit: 31.10.2018
+Version: 1.0
+Last edit: 1.11.2018
 
 --Propulse NTNU--
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import simps
 from scipy.interpolate import interp1d
 
 # Define some things for plotting
@@ -18,7 +17,7 @@ plt.rc('text', usetex=True)
 plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 # Geometry types
-noseTypes = ['cone', 'hemisphere']
+noseTypes = ['cone', 'hemisphere', 'Von Karman']
 
 
 class Nose:
@@ -94,15 +93,17 @@ class Nose:
 	def getInertiaMatrix(self):
 		if self.__noseType == noseTypes[0]:  # Conic
 			r = self.__diameter/2
-			Ixx = 1/2*self.getMass()*r**2
-			Iyy = 3*Ixx
+			m = self.getMass()
+			Ixx = 1/2*m*r**2
+			Iyy = 3*Ixx - m*self.getCOM()**2
 			Izz = Iyy
 			return np.diag([Ixx, Iyy, Izz])
 		elif self.__noseType == noseTypes[1]:
 			r = self.__diameter/2
-			Ixx = 2/3*self.getMass()*r**2
-			Iyy = 3*Ixx
-			Izz = 3*Iyy
+			m = self.getMass()
+			Ixx = 2/3*m*r**2
+			Iyy = 3*Ixx - m*self.getCOM()**2
+			Izz = Iyy
 			return np.diag([Ixx, Iyy, Izz])
 
 	def getNoseType(self):
@@ -195,7 +196,7 @@ class Body:
 		l = self.__length
 		m = self.getMass()
 		Ixx = 1/2*m*(r1**2 + r2**2)
-		Iyy = 1/3*m*l**2
+		Iyy = 1/12*m*l**2
 		Izz = Iyy
 		return np.diag([Ixx, Iyy, Izz])
 
@@ -260,7 +261,9 @@ class Fin:
 		SC = self.__semiChord
 		RC = self.__rootChord
 		TC = self.__tipChord
-		Ixx = SC**3*(3*TC + RC)/12*sigma  # about root chord axis (along body edge)
+		m = self.getMass()
+		y = SC*(2*TC + RC)/(3*(TC + RC))
+		Ixx = SC**3*(3*TC + RC)/12*sigma - m*y**2  # about root chord axis (along body edge)
 		Iyy = Ixx/2
 		Izz = Iyy
 		return np.diag([Ixx, Iyy, Izz])
@@ -334,7 +337,7 @@ class Motor:
 		if t < self.__timeArray[0]:
 			return self.__frameMass + self.__initialPropellantMass
 		elif t >= self.__timeArray[-1]:
-			return self.__frameMass
+			return self.__frameMass + self.__propellantMassList[-1]
 		else:
 			return self.__propellantMassFunction(t) + self.__frameMass
 
@@ -350,7 +353,7 @@ class Motor:
 		Rfuel = R - 3e-3  # Radius of solid fuel cylinder
 		l = self.getLength()
 		Ixx = frameMass*R**2 + 1/2*propMass*Rfuel**2
-		Iyy = 1/3*frameMass*l**2 + 1/3*propMass*(propMass/self.__initialPropellantMass*l)**2
+		Iyy = 1/12*frameMass*l**2 + 1/12*propMass*(propMass/self.__initialPropellantMass*l)**2
 		Izz = Iyy
 		return np.diag([Ixx, Iyy, Izz])
 
@@ -360,7 +363,8 @@ class Motor:
 		if t < self.__timeArray[0]:
 			Mtot = propMass + frameMass
 		elif t >= self.__timeArray[-1]:
-			Mtot = frameMass
+			propMass = self.__propellantMassList[-1]
+			Mtot = frameMass + propMass
 		else:
 			propMass = self.__propellantMassFunction(t)
 			Mtot = propMass + frameMass
@@ -405,15 +409,14 @@ class Motor:
 		propellantMassArray = self.__propellantMassList
 		COMarray = np.array([self.getCOM(t) for t in timeList])
 		# PLOT FORCE
-		plt.subplot(211)
 		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
 		plt.title(r'Thrust during burn phase of $\textbf{%s}$'%self.__name)
 		plt.ylabel('thrust [N]')
 		plt.xlabel('time [s]')
 		plt.grid()
 		plt.legend(loc='best')
+		plt.show()
 		# PLOT PROPELLANT MASS LOSS
-		plt.subplot(212)
 		plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
 		plt.title('Fuel mass during burn phase')
 		plt.ylabel('mass [kg]')
@@ -473,7 +476,7 @@ class Payload:
 		m = self.__mass
 		r = self.__width/2
 		Ixx = 2/5*m*r**2  # Assuming rough spherical shape
-		Iyy = Ixx + m*r**2
+		Iyy = Ixx
 		Izz = Iyy
 		return np.diag([Ixx, Iyy, Izz])
 
@@ -487,7 +490,6 @@ class Payload:
 
 
 # TODO: Add Von Karman nose
-# TODO: implement Inertia tensor for each part
 
 
 class RocketSimple:
@@ -505,18 +507,6 @@ class RocketSimple:
 		self.__motorMass = self.__rocketMotor.getMass(0)
 		# TOTAL MASS
 		self.__mass = self.__rocketMass + self.__motorMass
-
-		print("\tCalculating inertia matrix of rocket..")
-		# MOMENT OF INERTIA
-		noseMOI = nose.getInertiaMatrix()
-		bodyMOI = body.getInertiaMatrix()
-		finMOI = self.__N*fin.getInertiaMatrix()
-		motorMOI = motor.getInertiaMatrix(0)
-		payloadMOI = payload.getInertiaMatrix()
-
-
-		# FINAL MOMENT OF INERTIA MATRIX
-		self.__rocketMOI = noseMOI + bodyMOI + finMOI + motorMOI + payloadMOI
 
 		# COM
 		print("\tCalculating rocket COM (relative to rocket origin)..")
@@ -550,6 +540,7 @@ class RocketSimple:
 		RC = fin.getRootChord()
 		TC = fin.getTipChord()
 		alpha = fin.getTopEdgeAngle()*np.pi/180.0
+		y = SC*(2*TC + RC)/(3*(TC + RC))
 		Lf = np.sqrt(SC**2 + (SC/np.tan(alpha) + 1/2*(TC - RC))**2)
 		CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*Lf/(RC + TC))**2)))
 		Xb = partsPlacement[0] - nose.getLength()
@@ -560,6 +551,20 @@ class RocketSimple:
 		# FINAL ROCKET COP
 		CNrocket = CNnose + CNfin
 		self.__COP = (CNnose*Xnose + CNfin*Xf)/CNrocket
+
+		print("\tCalculating inertia matrix of rocket..")
+		# MOMENT OF INERTIA (about rocket axes with origin at COM, calculated with parallel axis thm)
+		noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*(self.__COM - self.__noseCOM)**2
+		bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*(self.__COM - self.__bodyCOM)**2
+		finMOI = self.__N*(fin.getInertiaMatrix() + (np.diag([1, 0, 0])*(body.getDiameter()/2 + y)**2 +
+													 np.diag([0, 1, 1])*(self.__COM - self.__finCOM)**2)*fin.getMass())
+		motorMOI = motor.getInertiaMatrix(0) + np.diag([0, 1, 1])*self.__motorMass*(self.__COM - self.__motorCOM)**2
+		payloadMOI = payload.getInertiaMatrix() + np.diag([0, 1, 1])*payload.getMass()*(self.__COM - self.__payloadCOM)**2
+
+		self.__rocketStructureMOI = noseMOI + bodyMOI + finMOI + payloadMOI
+		# FINAL MOMENT OF INERTIA MATRIX
+		self.__InertiaMatrix = self.__rocketStructureMOI + motorMOI
+
 		# TOTAL LENGTH OF ROCKET
 		self.__length = nose.getLength() - partsPlacement[0] + SC/np.tan(alpha) + TC
 		# MAXIMAL WIDTH OF ROCKET
@@ -589,6 +594,14 @@ class RocketSimple:
 		self.__mass = self.__rocketMass + self.__rocketMotor.getMass(t)
 		return self.__mass
 
+	def getInertiaMatrix(self, t):
+		self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t) - self.__rocketStructure[
+			0].getLength() - self.__rocketStructure[1].getLength()
+		motorMass = self.getMotor().getMass(t)
+		motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.getCOM(t) - self.__motorCOM)**2
+		self.__InertiaMatrix = self.__rocketStructureMOI + motorMOI
+		return self.__InertiaMatrix
+
 	def getTotalLength(self):
 		return self.__length
 
@@ -603,6 +616,9 @@ class RocketSimple:
 		self.__COM = (self.__rocketStructureCOM*self.__rocketMass + self.__motorCOM*motorMass)/mass
 		return self.__COM
 
+	def getCOMofParts(self):
+		return self.__COMofRocketStructure
+
 	# Aerodynamics
 	def getCOP(self):
 		return self.__COP
@@ -614,28 +630,35 @@ class RocketSimple:
 	def setCd(self, Cd):
 		self.__Cd = Cd
 
-	def setCl(self, Cl):
-		self.__Cl = Cl
-
-
 	# auxiliary
 	def printSpecifications(self, t):
 		Mass = self.getMass(t)
+		motorCOM = self.getMotor().getCOM(t)
 		COM = self.getCOM(t)
 		COP = self.getCOP()
+		MOI = self.getInertiaMatrix(t)
 		Cd = self.getCd()
+		partsCOM = np.append(self.getCOMofParts(), motorCOM)
+		partNames = ['Nose', 'Body', 'Fins', 'Payload', 'Motor']
 		length = self.getTotalLength()
 		width = self.getTotalWidth()
+		N = self.__N  # Number of fins
 		dots = 33*'-'
 
 		print(dots)
 		print("Rocket Specifications at time %1.1f" % t)
 		print(dots)
 		print("Mass: %1.2f kg" % Mass)
+		print("Moment of inertia (about rocket axes with COM as origin) [kgm²]:")
+		print(np.array2string(MOI, precision=3))
 		print("Length: %1.2f m" % length)
 		print("Width: %1.2f m" % width)
-		print("Center of mass: %1.2f m" % COM)
-		print("Center of pressure: %1.2f m" % COP)
+		print("Number of fins: %d" % N)
+		print("Center of mass of: ")
+		for i in range(len(partNames)):
+			print("\t%s: %1.2f m" % (partNames[i], partsCOM[i]))
+		print("Center of mass of rocket: %1.2f m" % COM)
+		print("Center of pressure of rocket: %1.2f m" % COP)
 		print(dots)
 
 	@staticmethod
@@ -645,12 +668,15 @@ class RocketSimple:
 		necessary rocket parts.
 		Example: folder 'myRocket'
 					'myRocket' content:
-								- Nose.dot
-								- Body.dot
-								- Motor.dot
-								- Fin.dot
-								- Payload.dot
+								- myNose.dot
+								- myBody.dot
+								- myMotor.dot
+								- myFin.dot
+								- myPayload.dot
 								- myRocket.dot   <--  rocket file!
+				 If this folder is located in the current working folder, you can simply create an instance of this
+				 rocket with:
+				 		 myRocket = RocketSimple.from_file('myRocket.dot', 'myRocket')
 		:param path_to_folder: [string] a path to the rocket folder relative to the current folder (empty by default)
 		:param rocket_file: [string] name of rocket file
 		:return: [RocketSimple class] Rocket instance with specs from rocket file.
@@ -692,5 +718,3 @@ def find_parameter(file, parameter):
 	File.close()
 	return arr[1]
 
-myRocket = RocketSimple.from_file('myRocket.dot', 'myRocket')
-myRocket.printSpecifications(5.7)
