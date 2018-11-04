@@ -1,0 +1,28 @@
+List of tests
+
+Rocket tests
+  Given a rocket file, plot all rocket quantities and see if they are reasonable
+
+Forces tests
+  Given a trajectory, find the forces at each time step and plot them.
+  See if the results are reasonable
+
+Trajectory tests
+  Check rotation matrices
+  Check matrix multiplications. Change to @
+  check initialInclination
+  check initialQuaternion
+  Check N, the length of the simulation intervals
+  Are the lengths of the arrays right?
+
+Simulator tests
+  One general test
+  Plot all results
+  See if they are reasonable
+
+
+
+Nuclino:
+  Equations of motion
+  Rotations
+  Conventions

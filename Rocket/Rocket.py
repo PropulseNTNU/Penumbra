@@ -674,7 +674,7 @@ class RocketSimple:
 		print("Rocket Specifications at time %1.1f" % t)
 		print(dots)
 		print("Mass: %1.2f kg" % Mass)
-		print("Moment of inertia (about rocket axes with COM as origin) [kgm²]:")
+		print("Moment of inertia (about rocket axes with COM as origin) [kgm^2]:")
 		print(np.array2string(MOI, precision=3))
 		print("Length: %1.2f m" % length)
 		print("Width: %1.2f m" % width)
