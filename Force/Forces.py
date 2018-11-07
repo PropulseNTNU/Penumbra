@@ -18,9 +18,6 @@ rho0 = P0/(R*T0/m)  # Air density at sea level [kg*m^-3]
 h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 
 
-# Hei detter er ny esidfj if
-
-
 # Forces
 
 def gravity(rocket, t):
@@ -42,13 +39,8 @@ def thrust(rocket, t):
 	:param t: [float] point in time [s]
 	:return: [np.array] thrust force at time t in rocket frame
 	"""
-<<<<<<< HEAD:Force/Forces.py
-	return np.array([rocket.getMotor().thrust(t), 0, 0])
-=======
 	Thrust = rocket.getMotor().thrust(t)
 	return np.array([Thrust, 0, 0])
->>>>>>> New trajectory branch:ForceModule/Forces.py
-
 
 def SAMdrag(rocket, position, linearVelocity):
 	"""
@@ -65,22 +57,3 @@ def SAMdrag(rocket, position, linearVelocity):
 	k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
 
 	return -k*np.linalg.norm(linearVelocity)*linearVelocity
-<<<<<<< HEAD:Force/Forces.py
-=======
-
-
-# Torques
-
-def SAMmoment(rocket, drag):
-	"""
-	:param rocket: [rocket class] The rocket object
-	:param drag: [np.array] The current drag in rocket coordinates
-	:return: [np.array] The moment created by Drag about CM of the rocket in rocket coordinates
-	"""
-	r = rocket.getCOP() - rocket.getCOM()
-<<<<<<< HEAD:Force/Forces.py
-	return np.cross(r, drag)
->>>>>>> Added total_impulse to motor files. Added new:ForceModule/Forces.py
-=======
-	return np.cross(r,SAMdrag(rocket, state))
->>>>>>> New trajectory branch:ForceModule/Forces.py
