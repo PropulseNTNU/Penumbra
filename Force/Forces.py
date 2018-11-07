@@ -2,23 +2,34 @@
 Module containing models of the forces acting on a rocket
 
 Version: 1.0
+<<<<<<< b3d8334e28cbde7ced206b8c6d6bfc6785e68406
 Last edit: 12.11.2018
+=======
+Last edit: 01.11.2018
+>>>>>>> Restructured the folders, the implementation of the CFD rocket has started.
 
 --Propulse NTNU--
 """
 import numpy as np
 from scipy.constants import R, g
 
+<<<<<<< b3d8334e28cbde7ced206b8c6d6bfc6785e68406
 #TODO Implement method to initiate T0 and P0
 # Constants
 #T0 = find_parameter("environment.dot", "temperature") + 273  # Temperature of Air [K]
 #P0 = find_parameter("environment.dot", "pressure")  # Barometric pressure at sea level [Pa]
+=======
+# Constants
+T0 = find_parameter("environment.dot", "temperature") + 273  # Temperature of Air [K]
+P0 = find_parameter("environment.dot", "pressure")  # Barometric pressure at sea level [Pa]
+>>>>>>> Restructured the folders, the implementation of the CFD rocket has started.
 m = 29e-3  # Molecular mass of Air [kg]
 #rho0 = P0/(R*T0/m)  # Air density at sea level [kg*m^-3]
 #h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 
 
 # Hei detter er ny esidfj if
+
 
 
 # Forces
