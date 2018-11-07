@@ -66,6 +66,14 @@ class Nose:
 			R2 = self.__diameter/2
 			R1 = R2 - d
 			return 2/3*np.pi*(R2**3 - R1**3)
+		elif self.__noseType == noseTypes[2]:  # Von Karmen
+			d = self.__thickness
+			R2 = self.__diameter/2
+			H2 = self.__length
+			R1 = R2 - d
+			R1 = R2*H1/H2
+			return ((3*np.pi**2)/32)*R2**2*H2-((3*np.pi**2)/32)*R1**2*H1
+
 
 	def getCavityVolum(self):
 		if self.__noseType == noseTypes[0]:  # Conic
@@ -80,9 +88,16 @@ class Nose:
 			R2 = self.__diameter/2
 			R1 = R2 - d
 			return 2/3*np.pi*R1**3
+		elif self.__noseType == noseTypes[2]:  # Von Karmen
+			d = self.__thickness
+			R2 = self.__diameter/2
+			H2 = self.__length
+			R1 = R2 - d
+			R1 = R2*H1/H2
+			return ((3*np.pi**2)/32)*R1**2*H1
 
 	def getLength(self):
-		if self.__noseType == noseTypes[0]:
+		if self.__noseType == noseTypes[0] or self.__noseType == noseTypes[2]:
 			return self.__length
 		elif self.__noseType == noseTypes[1]:
 			return self.__diameter/2
@@ -124,6 +139,15 @@ class Nose:
 			R2 = self.__diameter/2
 			R1 = R2 - d
 			return 3/8*(R2**4 - R1**4)/(R2**3 - R1**3)  # COM relative to bottom surface of nose
+		elif self.__noseType == noseTypes[2]:
+			V = self.getVolume()
+			d = self.__thickness
+			R2 = self.__diameter/2  # Outer radius of cone
+			H2 = self.__length
+			H1 = H2 - d
+			R1 = R2*H1/H2
+			return ((32/(15*np.pi)) * (H2**2 * R2**2 - H1**2 * R1**2)\
+			/(H2 * R2**2 - H1 * R1**2) - (H2/2)) # COM relative to bottom surface of nose
 
 	@staticmethod
 	def from_file(file):
@@ -717,4 +741,3 @@ def find_parameter(file, parameter):
 		arr = base.split("=")
 	File.close()
 	return arr[1]
-
