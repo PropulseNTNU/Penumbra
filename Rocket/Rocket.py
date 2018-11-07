@@ -323,7 +323,7 @@ class Motor:
 		self.__initialPropellantMass = args[5]
 		self.__frameMass = args[6]
 		print("\tInterpolating thrust data...")
-		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray)  # Linear Interpolation for thrust curve
+		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='spline')  # Linear Interpolation for thrust curve
 		self.__totalImpulse = args[2]
 		self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
 		self.__burnTime = self.__timeArray[-1]
@@ -596,6 +596,7 @@ class RocketSimple:
 		# FORCE COEFFICIENTS
 		self.__Cd = 1
 		print("Rocket initialized!")
+		self.printSpecifications(0)
 
 	# Rocket parts
 	def getNose(self):
@@ -657,7 +658,7 @@ class RocketSimple:
 	# auxiliary
 	def printSpecifications(self, t):
 		Mass = self.getMass(t)
-		motorCOM = self.getMotor().getCOM(t)
+		motorCOM = self.__motorCOM + self.getMotor().getCOM(t) - self.getMotor().getCOM(0)
 		COM = self.getCOM(t)
 		COP = self.getCOP()
 		MOI = self.getInertiaMatrix(t)
@@ -686,7 +687,7 @@ class RocketSimple:
 		print(dots)
 
 	@staticmethod
-	def from_file(rocket_file, path_to_folder=""):
+	def from_file(rocket_file, path_to_file=""):
 		"""
 		Creating an instance of a rocket by reading a rocket file that is located in a folder containing files for all
 		necessary rocket parts.
@@ -700,13 +701,13 @@ class RocketSimple:
 								- myRocket.dot   <--  rocket file!
 				 If this folder is located in the current working folder, you can simply create an instance of this
 				 rocket with:
-				 		 myRocket = RocketSimple.from_file('myRocket.dot', 'myRocket')
-		:param path_to_folder: [string] a path to the rocket folder relative to the current folder (empty by default)
+				 		 myRocket = RocketSimple.from_file('myRocket.dot', 'myRocket/')
+		:param path_to_file: [string] a path to the rocket file relative to the current path (empty by default)
 		:param rocket_file: [string] name of rocket file
 		:return: [RocketSimple class] Rocket instance with specs from rocket file.
 		"""
 		# get file names of each rocket part
-		path = path_to_folder + "/" + rocket_file
+		path = path_to_file + rocket_file
 		noseFile = find_parameter(path, "nose")
 		bodyFile = find_parameter(path, "body")
 		finFile = find_parameter(path, "fin")
@@ -718,7 +719,7 @@ class RocketSimple:
 		partsPlacement = np.array([eval(finPlacement), eval(payloadPlacement)])
 
 		# Initialize rocket parts
-		path = path_to_folder + "/"
+		path = path_to_file
 		nose = Nose.from_file(path + noseFile)
 		body = Body.from_file(path + bodyFile)
 		fin = Fin.from_file(path + finFile)

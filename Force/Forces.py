@@ -1,8 +1,8 @@
 """
-Module containing all the forces acting on a rocket
+Module containing models of the forces acting on a rocket
 
-Version: WIP
-Last edit: 23.10.2018
+Version: 1.0
+Last edit: 01.11.2018
 
 --Propulse NTNU--
 """
@@ -10,17 +10,17 @@ import numpy as np
 from Rocket.Rocket import find_parameter
 from scipy.constants import R, g
 
-#Constants
+# Constants
 T0 = find_parameter("environment.dot", "temperature") + 273  # Temperature of Air [K]
 P0 = find_parameter("environment.dot", "pressure")  # Barometric pressure at sea level [Pa]
 m = 29e-3  # Molecular mass of Air [kg]
 rho0 = P0/(R*T0/m)  # Air density at sea level [kg*m^-3]
 h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 
+
 # Forces
 
 def gravity(rocket, t):
-
 	"""
 	Gravitational force on the rocket
 	Assumptions:- Homogeneous gravity field in -z direction
@@ -30,7 +30,7 @@ def gravity(rocket, t):
 	:param t: [float] point in time [s]
 	:return: [np.array] gravity vector in the inertial frame [N].
 	"""
-	return np.array([0,0,-rocket.getMass(t)*g])
+	return np.array([0, 0, -rocket.getMass(t)*g])
 
 
 def thrust(rocket, t):
@@ -51,10 +51,9 @@ def SAMdrag(rocket, position, linearVelocity):
 	:param linearVelocity: [np.array] The current linear velocity
 	:return: [np.array] The drag force (SAM) in the world frame
 	"""
-	z = position[2] # Vertical position of rocket
+	z = position[2]  # Vertical position of rocket
 	Cd = rocket.getCd()
 	Aref = np.pi*(rocket.getBody().getDiameter()/2)**2
 	k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
 
 	return -k*np.linalg.norm(linearVelocity)*linearVelocity
-
