@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 # Define some things for plotting
-font = {'family': 'normal', 'weight': 'bold', 'size': 16}
-plt.rc('font', **font)
-plt.rc('text', usetex=True)
-plt.rcParams['text.latex.preamble'] = [r'\boldmath']
+#font = {'family': 'normal', 'weight': 'bold', 'size': 16}
+#plt.rc('font', **font)
+#plt.rc('text', usetex=True)
+#plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 # Geometry types
 noseTypes = ['cone', 'hemisphere', 'Von Karman']
@@ -426,37 +426,37 @@ class Motor:
 	def massFlow(self, t):
 		return self.thrust(t)/self.__exhaustSpeed
 
-	def plotPerformance(self):
-		dt = self.__burnTime/1e4
-		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
-		thrustArray = self.__thrustFunction(timeList)
-		propellantMassArray = self.__propellantMassList
-		COMarray = np.array([self.getCOM(t) for t in timeList])
-		# PLOT FORCE
-		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
-		plt.title(r'Thrust during burn phase of $\textbf{%s}$'%self.__name)
-		plt.ylabel('thrust [N]')
-		plt.xlabel('time [s]')
-		plt.grid()
-		plt.legend(loc='best')
-		plt.show()
-		# PLOT PROPELLANT MASS LOSS
-		plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
-		plt.title('Fuel mass during burn phase')
-		plt.ylabel('mass [kg]')
-		plt.xlabel('time [s]')
-		plt.grid()
-		plt.legend(loc='best')
-		plt.subplots_adjust(hspace=0.7)
-		plt.show()
+#	def plotPerformance(self):
+#		dt = self.__burnTime/1e4
+#		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
+#		thrustArray = self.__thrustFunction(timeList)
+#		propellantMassArray = self.__propellantMassList
+#		COMarray = np.array([self.getCOM(t) for t in timeList])
+#		# PLOT FORCE
+#		plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
+#		plt.title(r'Thrust during burn phase of $\textbf{%s}$'%self.__name)
+#		plt.ylabel('thrust [N]')
+#		plt.xlabel('time [s]')
+#		plt.grid()
+#		plt.legend(loc='best')
+#		plt.show()
+#		# PLOT PROPELLANT MASS LOSS
+#		plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
+#		plt.title('Fuel mass during burn phase')
+#		plt.ylabel('mass [kg]')
+#		plt.xlabel('time [s]')
+#		plt.grid()
+#		plt.legend(loc='best')
+#		plt.subplots_adjust(hspace=0.7)
+#		plt.show()
 		# PLOT COM OVER TIME
-		plt.plot(timeList, COMarray, label='COM', c='r', lw='2')
-		plt.title(r'COM of $\textbf{%s}$ during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
-		plt.ylabel('position [m]')
-		plt.xlabel('time [s]')
-		plt.grid()
-		plt.legend(loc='best')
-		plt.show()
+#		plt.plot(timeList, COMarray, label='COM', c='r', lw='2')
+#		plt.title(r'COM of $\textbf{%s}$ during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
+#		plt.ylabel('position [m]')
+#		plt.xlabel('time [s]')
+#		plt.grid()
+#		plt.legend(loc='best')
+#		plt.show()
 
 	@staticmethod
 	def from_file(motorFile):
