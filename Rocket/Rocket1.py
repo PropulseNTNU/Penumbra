@@ -9,12 +9,11 @@ Last edit: 11.11.2018
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from lib.File_utilities import find_parameter
+from Rocket.lib.File_utilities import find_parameter
 
 # Define some things for plotting
-font = {'family': 'normal', 'weight': 'bold', 'size': 16}
+font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}
 plt.rc('font', **font)
-plt.rc('text', usetex=True)
 plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 # Geometry types
@@ -70,7 +69,7 @@ class Nose:
 			d = self.__thickness
 			R2 = self.__diameter/2
 			H2 = self.__length
-			R1 = R2 - d
+			H1 = H2 - d
 			R1 = R2*H1/H2
 			return ((3*np.pi**2)/32)*R2**2*H2-((3*np.pi**2)/32)*R1**2*H1
 
@@ -92,7 +91,7 @@ class Nose:
 			d = self.__thickness
 			R2 = self.__diameter/2
 			H2 = self.__length
-			R1 = R2 - d
+			H1 = H2 - d
 			R1 = R2*H1/H2
 			return ((3*np.pi**2)/32)*R1**2*H1
 
@@ -146,7 +145,7 @@ class Nose:
 			H2 = self.__length
 			H1 = H2 - d
 			R1 = R2*H1/H2
-			return ((32/(15*np.pi)) * (H2**2 * R2**2 - H1**2 * R1**2)\
+			return ((32/(15*np.pi)) * (H2**2 * R2**2 - H1**2 * R1**2)
 			/(H2 * R2**2 - H1 * R1**2) - (H2/2)) # COM relative to bottom surface of nose
 
 	@staticmethod
@@ -322,13 +321,13 @@ class Motor:
 		self.__initialPropellantMass = args[5]
 		self.__frameMass = args[6]
 		print("\tInterpolating thrust data...")
-		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='spline')  # Linear Interpolation for thrust curve
+		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='quadratic')  # quad Interpolation for thrust curve
 		self.__totalImpulse = args[2]
 		self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
 		self.__burnTime = self.__timeArray[-1]
 		self.__avgThrust = round(self.__totalImpulse/self.__burnTime, 4)
 		dt = self.__burnTime/1e4  # This is usually in the order of 100 micro seconds (time step).
-		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
+		timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
 		iterations = len(timeList)
 		propellantMass = self.__initialPropellantMass
 		massFlow = self.__thrustFunction(timeList)/self.__exhaustSpeed
@@ -357,12 +356,12 @@ class Motor:
 		return self.__name
 
 	def getMass(self, t):
-		if t < self.__timeArray[0]:
+		if t <= self.__timeArray[0]:
 			return self.__frameMass + self.__initialPropellantMass
 		elif t >= self.__timeArray[-1]:
 			return self.__frameMass + self.__propellantMassList[-1]
-		else:
-			return self.__propellantMassFunction(t) + self.__frameMass
+
+		return self.__propellantMassFunction(t) + self.__frameMass
 
 	def getInertiaMatrix(self, t):
 		"""
@@ -377,11 +376,10 @@ class Motor:
 			propMass = self.__propellantMassFunction(t)
 
 		r0 = self.getDiameter()/2
-		h = self.getLength
+		h = self.getLength()
 		fuelMassRatio = propMass/self.__initialPropellantMass
 		Ixx = frameMass*r0**2 + propMass*(r0**2)/2*(2 - fuelMassRatio)
-		Iyy = propMass*((h**2)/12 + 1/4*(r0**2)*(2 - fuelMassRatio))
-		+ frameMass*((h**2)/12 + 1/4*(r0**2))
+		Iyy = propMass*((h**2)/12 + 1/4*(r0**2)*(2 - fuelMassRatio)) + frameMass*((h**2)/12 + 1/4*(r0**2))
 		Izz = Iyy
 		return np.diag([Ixx, Iyy, Izz])
 		#TODO implement MOI for motor with axial fuel burn.
@@ -423,6 +421,8 @@ class Motor:
 	def getTotalImpulse(self):
 		return self.__totalImpulse
 
+	def getBurnTime(self):
+		return self.__burnTime
 
 	# Auxiliary functions
 	def thrust(self, t):
@@ -436,7 +436,7 @@ class Motor:
 
 	def plotPerformance(self):
 		dt = self.__burnTime/1e4
-		timeList = np.arange(self.__timeArray[0], self.__burnTime, dt)
+		timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
 		thrustArray = self.__thrustFunction(timeList)
 		propellantMassArray = self.__propellantMassList
 		COMarray = np.array([self.getCOM(t) for t in timeList])
@@ -457,7 +457,7 @@ class Motor:
 		plt.legend(loc='best')
 		plt.show()
 		# PLOT COM OVER TIME
-		plt.plot(timeList, COMarray, label='COM', c='r', lw='2')
+		plt.plot(timeList, COMarray*100, label='COM', c='r', lw='2')
 		plt.title('COM of %s during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
 		plt.ylabel('position [m]')
 		plt.xlabel('time [s]')
@@ -518,9 +518,6 @@ class Payload:
 	def from_file(file=''):
 		width = find_parameter(file, "width")
 		return Payload(eval(width))
-
-
-# TODO: Add Von Karman nose
 
 
 class RocketSimple:

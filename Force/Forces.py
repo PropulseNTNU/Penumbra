@@ -2,20 +2,20 @@
 Module containing models of the forces acting on a rocket
 
 Version: 1.0
-Last edit: 01.11.2018
+Last edit: 12.11.2018
 
 --Propulse NTNU--
 """
 import numpy as np
-from Rocket.Rocket import find_parameter
 from scipy.constants import R, g
 
+#TODO Implement method to initiate T0 and P0
 # Constants
-T0 = find_parameter("environment.dot", "temperature") + 273  # Temperature of Air [K]
-P0 = find_parameter("environment.dot", "pressure")  # Barometric pressure at sea level [Pa]
+#T0 = find_parameter("environment.dot", "temperature") + 273  # Temperature of Air [K]
+#P0 = find_parameter("environment.dot", "pressure")  # Barometric pressure at sea level [Pa]
 m = 29e-3  # Molecular mass of Air [kg]
-rho0 = P0/(R*T0/m)  # Air density at sea level [kg*m^-3]
-h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
+#rho0 = P0/(R*T0/m)  # Air density at sea level [kg*m^-3]
+#h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 
 
 # Forces
@@ -41,6 +41,7 @@ def thrust(rocket, t):
 	"""
 	Thrust = rocket.getMotor().thrust(t)
 	return np.array([Thrust, 0, 0])
+
 
 def SAMdrag(rocket, position, linearVelocity):
 	"""
