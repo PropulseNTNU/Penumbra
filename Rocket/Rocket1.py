@@ -2,7 +2,7 @@
 Rocket module - The definition of the rocket and its constituent parts
 
 Version: 1.0
-Last edit: 11.11.2018
+Last edit: 16.11.2018
 
 --Propulse NTNU--
 """
@@ -459,7 +459,7 @@ class Motor:
 		# PLOT COM OVER TIME
 		plt.plot(timeList, COMarray*100, label='COM', c='r', lw='2')
 		plt.title('COM of %s during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
-		plt.ylabel('position [m]')
+		plt.ylabel('position [cm]')
 		plt.xlabel('time [s]')
 		plt.grid()
 		plt.legend(loc='best')
