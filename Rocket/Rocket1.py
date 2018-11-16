@@ -321,7 +321,7 @@ class Motor:
 		self.__initialPropellantMass = args[5]
 		self.__frameMass = args[6]
 		print("\tInterpolating thrust data...")
-		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='quadratic')  # quad Interpolation for thrust curve
+		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='linear')  # Linear Interpolation for thrust curve
 		self.__totalImpulse = args[2]
 		self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
 		self.__burnTime = self.__timeArray[-1]
@@ -490,7 +490,7 @@ class Motor:
 					f = eval(row[1])
 					thrust.append([t, f])
 		thrust = np.array(thrust)
-		return Motor(name, thrust, eval(totalImpulse), eval(diameter), eval(length), eval(propMass), eval(frameMass))
+		return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass))
 
 
 class Payload:

@@ -3,7 +3,7 @@ This is a module that contains functions for file reading.
 
 Last edit: 16.11.2018
 """
-from numpy import linspace, reshape, flip, loadtxt, sin, pi
+from numpy import linspace, reshape, flip, loadtxt, sin, pi, unique
 
 
 def find_parameter(file, parameter):
@@ -59,6 +59,7 @@ def unwrap_report2(file):
 	"""
 	report = loadtxt(file, skiprows=1, dtype=float)
 
+        
 	AoA = report[:, 0]
 	speed = report[:, 1]
 	lift = report[:, 2]

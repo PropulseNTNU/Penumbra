@@ -40,11 +40,11 @@ class Rocket:
 		momentsArray_CG = args[9]
 
 		print('\tInterpolating the drag force..')
-		self.__Dragforce = interp2d(freeAirStreamSpeeds, AoAarray, dragArray)
+		self.__Dragforce = interp2d(AoAarray, freeAirStreamSpeeds, dragArray)
 		print('\tInterpolating the lift force..')
-		self.__Liftforce = interp2d(freeAirStreamSpeeds, AoAarray, liftArray)
+		self.__Liftforce = interp2d(AoAarray, freeAirStreamSpeeds, liftArray)
 		print('\tInterpolating the moment about COM (component normal to aerodynamic plane)..')
-		self.__MomentAboutCOM = interp2d(freeAirStreamSpeeds, AoAarray, momentsArray_CG)
+		self.__MomentAboutCOM = interp2d(AoAarray, freeAirStreamSpeeds, momentsArray_CG)
 
 		# Done
 		print('Rocket initialized!\n')
@@ -72,6 +72,9 @@ class Rocket:
 		return 1/mass*(initMass*initCOM + (rocketLength - motorHeight/2)*(initMotorMass - motorMass))
 
 	def getLength(self):
+		"""
+		:return: the length of the rocket [m]
+		"""
 		return self.__length
 
 	# Aero dynamics
@@ -82,7 +85,7 @@ class Rocket:
 
 		:return: [float] The Drag on rocket attacking in COP [N]
 		"""
-		return self.__Dragforce(speed, AoA)
+		return self.__Dragforce(AoA, speed)
 
 	def getLift(self, speed, AoA):
 		"""
@@ -91,7 +94,7 @@ class Rocket:
 
 		:return: [float] The Lift on rocket attacking in COP [N]
 		"""
-		return self.__Liftforce(speed, AoA)
+		return self.__Liftforce(AoA, speed)
 
 	def getMomentAboutCOM(self, speed, AoA):
 		"""
@@ -100,7 +103,7 @@ class Rocket:
 
 		:return: [float] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
 		"""
-		return self.__MomentAboutCOM(speed, AoA)
+		return self.__MomentAboutCOM(AoA, speed)
 
 	def getCOP(self, speed, AoA):
 		"""
@@ -109,9 +112,9 @@ class Rocket:
 
 		:return: [float] The position of COP relative to nose tip [m]
 		"""
-		Fd = self.getDrag(speed, AoA)
-		Fl = self.getLift(speed, AoA)
-		M = self.getMomentAboutCOM(speed, AoA)
+		Fd = self.getDrag(AoA, speed)
+		Fl = self.getLift(AoA, speed)
+		M = self.getMomentAboutCOM(AoA, speed)
 		COM_0 = self.getCOM(0)
 
 		return COM_0 - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
@@ -216,22 +219,23 @@ class Rocket:
 		return: A rocket instance with specs from initFile and CFD.
 		"""
 		path = path_to_file + initFile
-		initMass = find_parameter(path, 'initial_mass')
+		initMass = find_parameter(path, 'initial_mass')  # in grams
 		initMOI = find_parameter(path, 'initial_moi')
-		initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))
-		initCOM = find_parameter(path, 'initial_com')
-		length = find_parameter(path, 'length')
+		initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in g*mm^2
+		initCOM = find_parameter(path, 'initial_com') # in millimeters
+		length = find_parameter(path, 'length') # in millimeters
 		motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
 
 		path = path_to_file + sampleReport
 		T = find_parameter(path, 'period')
-		alpha_max = find_parameter(path, 'alpha_max')
-		delta_v = find_parameter(path, 'delta_v')
-		v0 = find_parameter(path, 'v0')
+		alpha_max = find_parameter(path, 'alpha_max') # In degrees
+		delta_v = find_parameter(path, 'delta_v')  # In mach
+		v0 = find_parameter(path, 'v0') # In mach
 		alpha, air_speed, drag, lift, moment = unwrap_report1(path,
 															  int(T), float(alpha_max), float(delta_v), float(v0))
 
-		return Rocket(float(initMass), initMOI, float(initCOM), float(length), motor, air_speed, alpha, drag, lift,
+		return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed,
+					  alpha, drag, lift,
 					  moment)
 
 	@staticmethod
@@ -267,15 +271,17 @@ class Rocket:
 				return: A rocket instance with specs from initFile and CFD.
 				"""
 		path = path_to_file + initFile
-		initMass = find_parameter(path, 'initial_mass')
+		# CAD files are using the units mentioned below
+		initMass = find_parameter(path, 'initial_mass')  # in grams
 		initMOI = find_parameter(path, 'initial_moi')
-		initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))
-		initCOM = find_parameter(path, 'initial_com')
-		length = find_parameter(path, 'length')
+		initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in g*mm^2
+		initCOM = find_parameter(path, 'initial_com')  # in millimeters
+		length = find_parameter(path, 'length')  # in millimeters
 		motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
 
 		path = path_to_file + sampleReport
 		alpha, air_speed, drag, lift, moment = unwrap_report2(path)
 
-		return Rocket(float(initMass), initMOI, float(initCOM), float(length), motor, air_speed, alpha, drag, lift,
+		return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed,
+					  alpha, drag, lift,
 					  moment)

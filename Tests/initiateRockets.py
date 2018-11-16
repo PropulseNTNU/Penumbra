@@ -7,7 +7,6 @@ from Rocket.Rocket1 import RocketSimple
 rocket_file = 'myRocket.dot'
 path = 'myRocket1/'
 myRocket1 = RocketSimple.from_file(rocket_file, path)
-# myRocket1.printSpecifications(0)
 
 # FOR ROCKET CLASS 2
 sample_file = 'full-report.out'
