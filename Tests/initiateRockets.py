@@ -10,8 +10,8 @@ myRocket1 = RocketSimple.from_file(rocket_file, path)
 # myRocket1.printSpecifications(0)
 
 # FOR ROCKET CLASS 2
-sample_file = 'full_report_edited.out'
+sample_file = 'full_report_edited.dot'
 init_file = 'initFile.dot'
 path = 'myRocket2/'
-myRocket2 = Rocket.from_file_without_AoAspeed(init_file, sample_file, path)
+myRocket2 = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
 myRocket2.plot()
