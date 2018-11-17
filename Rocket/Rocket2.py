@@ -9,8 +9,8 @@ Last edit: 16.11.2018
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
-from Rocket.Rocket1 import Motor
-from Rocket.lib.File_utilities import find_parameter, unwrap_report1, unwrap_report2
+from Rocket1 import Motor
+from lib.File_utilities import find_parameter, unwrap_report1, unwrap_report2
 
 # Define some things for plotting
 font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}

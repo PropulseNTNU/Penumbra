@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../Rocket/')
-from Rocket.Rocket2 import Rocket
-from Rocket.Rocket1 import RocketSimple
+from Rocket2 import Rocket
+from Rocket1 import RocketSimple
 
 # FOR ROCKET CLASS 1
 rocket_file = 'myRocket.dot'

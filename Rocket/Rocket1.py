@@ -321,11 +321,7 @@ class Motor:
 		self.__initialPropellantMass = args[5]
 		self.__frameMass = args[6]
 		print("\tInterpolating thrust data...")
-<<<<<<< b3d8334e28cbde7ced206b8c6d6bfc6785e68406:Rocket/Rocket1.py
 		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='quadratic')  # quad Interpolation for thrust curve
-=======
-		self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='spline')  # Linear Interpolation for thrust curve
->>>>>>> Restructured the folders, the implementation of the CFD rocket has started.:Rocket/Rocket.py
 		self.__totalImpulse = args[2]
 		self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
 		self.__burnTime = self.__timeArray[-1]
@@ -735,21 +731,3 @@ class RocketSimple:
 		payload = Payload.from_file(path + payloadFile)
 
 		return RocketSimple(nose, body, fin, eval(numberOfFins), motor, payload, partsPlacement)
-<<<<<<< b3d8334e28cbde7ced206b8c6d6bfc6785e68406:Rocket/Rocket1.py
-=======
-
-
-def find_parameter(file, parameter):
-	File = open(file, 'r')
-	arr = ["", ""]
-	while arr[0] != parameter.lower():
-		base = File.readline()
-		if base == '':
-			print("ERROR: Could not find parameter '" + parameter + "' in '" + file + "'.")
-			return False
-		base = base.replace(" ", "")
-		base = base.replace("\n", "")
-		arr = base.split("=")
-	File.close()
-	return arr[1]
->>>>>>> Restructured the folders, the implementation of the CFD rocket has started.:Rocket/Rocket.py
