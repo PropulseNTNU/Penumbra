@@ -3,6 +3,7 @@ length = 70.2e-3
 diameter = 98e-3
 propellant_mass = 4959.0e-3
 frame_mass = 3383e-3
+total_impulse = 9870
   0.02 1873.084
   0.059 2177.212
   0.265 1932.773

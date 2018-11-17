@@ -3,7 +3,7 @@ This is a module that contains functions for file reading.
 
 Last edit: 16.11.2018
 """
-from numpy import linspace, reshape, flip, loadtxt, sin, pi
+from numpy import linspace, reshape, flip, loadtxt, sin, pi, unique
 
 
 def find_parameter(file, parameter):

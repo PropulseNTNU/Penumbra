@@ -2,7 +2,7 @@ Parts:
 nose = myNose.dot
 body = myBody.dot
 fin = myFin.dot
-motor = CesaroniM1800.dot
+motor = ../Motors/CesaroniM1800.dot
 payload = myPayload.dot
 
 Number of fins:
