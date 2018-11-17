@@ -59,7 +59,6 @@ def unwrap_report2(file):
 	"""
 	report = loadtxt(file, skiprows=1, dtype=float)
 
-        
 	AoA = report[:, 0]
 	speed = report[:, 1]
 	lift = report[:, 2]

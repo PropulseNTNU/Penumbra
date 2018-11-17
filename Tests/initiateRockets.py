@@ -1,16 +1,17 @@
 import sys
-sys.path.append('../Rocket/')
-from Rocket.Rocket2 import Rocket
-from Rocket.Rocket1 import RocketSimple
+sys.path.append('../Rocket')
+
+from Rocket2 import Rocket
+from Rocket1 import RocketSimple
 
 # FOR ROCKET CLASS 1
-rocket_file = 'myRocket.dot'
+init_file = 'myRocket.dot'
 path = 'myRocket1/'
-myRocket1 = RocketSimple.from_file(rocket_file, path)
+myRocket1 = RocketSimple.from_file(init_file, path)
 
-# FOR ROCKET CLASS 2
-sample_file = 'full-report.out'
-init_file = 'initFile.dot'
-path = 'myRocket2/'
-myRocket2 = Rocket.from_file_without_AoAspeed(init_file, sample_file, path)
+# FOR ROCKET CLASS 2 (CFD)
+sample_file = 'full_report_edited.dot'
+init_file = 'mass_properties_rocket_v9_edited.dot'
+path = 'V9/'
+myRocket2 = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
 myRocket2.plot()
