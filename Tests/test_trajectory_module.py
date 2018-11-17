@@ -4,13 +4,13 @@ sys.path.append('../Forces/')
 sys.path.append('../Trajectory/')
 import Forces as Forces
 import Trajectory as Trajectory
-import Rocket2 as Rocket
+from Rocket2 import Rocket
 
 def test_trajectory_module():
-    sample_file = 'full-report.out'
+    sample_file = 'full_report_edited.dot'
     init_file = 'initFile.dot'
     path = 'myRocket2/'
-    rocket = Rocket.from_file_without_AoAspeed(init_file, sample_file, path)
+    rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
     initialInclination = 6.0/180.0*np.pi
     launchRampLength = 3*rocket.getHeight()
     timeStep = 0.1
