@@ -434,7 +434,7 @@ class Motor:
     def massFlow(self, t):
         return self.thrust(t)/self.__exhaustSpeed
 
-    def plotPerformance(self):
+    def plotPerformance(self, show=True):
         dt = self.__burnTime/1e4
         timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
         thrustArray = self.__thrustFunction(timeList)
@@ -447,7 +447,7 @@ class Motor:
         plt.xlabel('time [s]')
         plt.grid()
         plt.legend(loc='best')
-        plt.show()
+        plt.figure()
         # PLOT PROPELLANT MASS LOSS
         plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
         plt.title('Propellant mass during burn phase')
@@ -455,7 +455,7 @@ class Motor:
         plt.xlabel('time [s]')
         plt.grid()
         plt.legend(loc='best')
-        plt.show()
+        plt.figure()
         # PLOT COM OVER TIME
         plt.plot(timeList, COMarray*100, label='COM', c='r', lw='2')
         plt.title('COM of %s during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
@@ -463,7 +463,9 @@ class Motor:
         plt.xlabel('time [s]')
         plt.grid()
         plt.legend(loc='best')
-        plt.show()
+        plt.figure()
+        if show:
+            plt.show()
 
     @staticmethod
     def from_file(motorFile):

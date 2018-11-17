@@ -28,23 +28,25 @@ class Rocket:
         self.__length = args[3]
         self.__motor = args[4]
 
-        # for plotting, array of time during burn phase
+		# Print motor specs
+        print(self.__motor)
 
+        # for plotting, array of time during burn phase
         self.__time = np.arange(0, self.__motor.getBurnTime(), 5e-4)
 
         # Interpolation of forces and moments
-        freeAirStreamSpeeds = args[5]
-        AoAarray = args[6]
-        dragArray = args[7]
-        liftArray = args[8]
-        momentsArray_CG = args[9]
+        self.__freeAirStreamSpeeds = args[5]
+        self.__AoAarray = args[6]
+        self.__dragArray = args[7]
+        self.__liftArray = args[8]
+        self.__momentsArray_CG = args[9]
 
         print('\tInterpolating the drag force..')
-        self.__Dragforce = interp2d(AoAarray, freeAirStreamSpeeds, dragArray)
+        self.__Dragforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__dragArray, kind='cubic')
         print('\tInterpolating the lift force..')
-        self.__Liftforce = interp2d(AoAarray, freeAirStreamSpeeds, liftArray)
+        self.__Liftforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__liftArray)
         print('\tInterpolating the moment about COM (component normal to aerodynamic plane)..')
-        self.__MomentAboutCOM = interp2d(AoAarray, freeAirStreamSpeeds, momentsArray_CG)
+        self.__MomentAboutCOM = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__momentsArray_CG)
 
         # Done
         print('Rocket initialized!\n')
@@ -78,7 +80,7 @@ class Rocket:
         return self.__length
 
     # Aero dynamics
-    def getDrag(self, speed, AoA):
+    def getDrag(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
@@ -87,7 +89,7 @@ class Rocket:
         """
         return self.__Dragforce(AoA, speed)
 
-    def getLift(self, speed, AoA):
+    def getLift(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
@@ -96,28 +98,31 @@ class Rocket:
         """
         return self.__Liftforce(AoA, speed)
 
-    def getMomentAboutCOM(self, speed, AoA):
+    def getMomentAboutCOM(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
         """
-        return self.__MomentAboutCOM(speed, AoA)
+        return self.__MomentAboutCOM(AoA, speed)
 
-    def getCOP(self, speed, AoA):
+    def getCOP(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The position of COP relative to nose tip [m]
         """
-        Fd = self.getDrag(speed, AoA)
-        Fl = self.getLift(speed, AoA)
-        M = self.getMomentAboutCOM(speed, AoA)
+        Fd = self.getDrag(AoA, speed)
+        Fl = self.getLift(AoA, speed)
+        M = self.getMomentAboutCOM(AoA, speed)
         COM_0 = self.getCOM(0)
 
         return COM_0 - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
+
+    def getAeroData(self):
+        return self.__AoAarray, self.__freeAirStreamSpeeds, self.__dragArray, self.__liftArray, self.__momentsArray_CG
 
     def getInertiaMatrix(self, t):
         """
@@ -144,7 +149,7 @@ class Rocket:
     # auxiliary
     def plot(self):
         # Plots of motor performance
-        self.__motor.plotPerformance()
+        self.__motor.plotPerformance(False)  # show=False in this case
 
         # Plots of rocket characteristics (during burn phase)
         time = self.__time
@@ -162,7 +167,7 @@ class Rocket:
         ax2.set_title('Mass of rocket during burn phase of %1.1f s'%burnTime)
         ax2.grid()
         plt.subplots_adjust(hspace=0.5)
-        plt.show()
+        plt.figure()
         # Moment of inertia
         print('Creating plot of Ixx, Iyy and Izz...')
         steps = len(time)
@@ -183,6 +188,7 @@ class Rocket:
         ax2.set_title('Iyy and Izz during burn phase of %1.1f s'%burnTime)
         ax2.grid()
         plt.subplots_adjust(hspace=0.5)
+        plt.figure()
         plt.show()
         print('Plotting done!\n')
 
