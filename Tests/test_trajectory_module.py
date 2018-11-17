@@ -10,7 +10,7 @@ def test_trajectory_module():
     sample_file = 'full-report.out'
     init_file = 'initFile.dot'
     path = 'myRocket2/'
-    rocket = Rocket.from_file_without_AoAspeed(init_file, sample_file, path)
+    rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
     initialInclination = 6.0/180.0*np.pi
     launchRampLength = 3*rocket.getHeight()
     timeStep = 0.1
