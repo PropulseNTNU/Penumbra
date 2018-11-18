@@ -13,5 +13,6 @@ from Rocket1 import RocketSimple
 sample_file = 'full_report_edited.dot'
 init_file = 'mass_properties_rocket_v9_edited.dot'
 path = 'V9/'
-myRocket2 = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
-myRocket2.plot()
+rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
+rocket.plot()
+#rocket.getMotor().plotPerformance()

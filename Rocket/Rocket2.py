@@ -28,7 +28,7 @@ class Rocket:
         self.__length = args[3]
         self.__motor = args[4]
 
-		# Print motor specs
+        # Print motor specs
         print(self.__motor)
 
         # for plotting, array of time during burn phase
@@ -124,6 +124,11 @@ class Rocket:
     def getAeroData(self):
         return self.__AoAarray, self.__freeAirStreamSpeeds, self.__dragArray, self.__liftArray, self.__momentsArray_CG
 
+    def getStabilityMargin(self, AoA, speed, t=0):
+        COM = self.getCOM(t)
+        COP = self.getCOP(AoA, speed)
+        return COM - COP
+
     def getInertiaMatrix(self, t):
         """
         :param t: [float] point in time [s]
@@ -149,7 +154,7 @@ class Rocket:
     # auxiliary
     def plot(self):
         # Plots of motor performance
-        self.__motor.plotPerformance(False)  # show=False in this case
+        self.__motor.plotPerformance(False)  # plt.show=False in this case
 
         # Plots of rocket characteristics (during burn phase)
         time = self.__time
@@ -157,6 +162,7 @@ class Rocket:
         print('Creating plot of COM and mass...')
         COM = np.array([self.getCOM(t) for t in time])
         mass = np.array([self.getMass(t) for t in time])
+        plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[cm]')
         ax1.plot(time, 100*COM, label='COMx(t)', lw=2, c='r')
         ax1.set_title('COM of rocket during burn phase of %1.1f s'%burnTime)
@@ -167,7 +173,6 @@ class Rocket:
         ax2.set_title('Mass of rocket during burn phase of %1.1f s'%burnTime)
         ax2.grid()
         plt.subplots_adjust(hspace=0.5)
-        plt.figure()
         # Moment of inertia
         print('Creating plot of Ixx, Iyy and Izz...')
         steps = len(time)
@@ -177,18 +182,18 @@ class Rocket:
             MOI = np.diagonal(self.getInertiaMatrix(time[i]))
             Ixx[i] = MOI[0]
             Iyy[i] = MOI[1]
-        # Izz = Iyy, don't need to create another list for this
+        # Izz = Iyy with principle axes, don't need to create another list for this
+        plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[kgcm²]')
-        ax1.plot(time, Ixx*1e4, label='Ixx(t)', lw=2, c='r')  # Multiply by 10,000 to get correct unit
+        ax1.plot(time, Ixx*1e4, label='Ixx(t)', lw=2, c='r')  # Multiplied by 10,000 to get correct unit
         ax1.set_title('Ixx of rocket during burn phase of %1.1f s'%burnTime)
         ax1.grid()
 
         ax2 = plt.subplot(212, xlabel='time [s]', ylabel='[kgcm²]')
-        ax2.plot(time, Iyy*1e4, label='I(t)', lw=2, c='b')  # Multiply by 10,000 to get correct unit
+        ax2.plot(time, Iyy*1e4, label='I(t)', lw=2, c='b')  # Multiplied by 10,000 to get correct unit
         ax2.set_title('Iyy and Izz during burn phase of %1.1f s'%burnTime)
         ax2.grid()
         plt.subplots_adjust(hspace=0.5)
-        plt.figure()
         plt.show()
         print('Plotting done!\n')
 

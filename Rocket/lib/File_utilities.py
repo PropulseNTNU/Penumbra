@@ -66,3 +66,13 @@ def unwrap_report2(file):
 	moment = report[:, 4]
 
 	return AoA, speed, drag, lift, moment
+
+
+def unwrap_openRocket(file):
+        # Assuming file is in a proper format. See file in Tests/V9 folder
+        f = loadtxt(file, skiprows=1, delimiter=',')
+
+        # Longitudinal MOI is Iyy and Izz
+        time, mass, propMass, I_longitudinal, Ixx, COM = f[:,0], f[:,1], f[:,2], f[:,3], f[:,4], f[:,5]
+
+        return time, mass, propMass, COM, Ixx, I_longitudinal

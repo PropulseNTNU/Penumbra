@@ -23,22 +23,23 @@ speed = np.arange(0, 0.5, 5e-3)
 aoa = np.arange(0, 10, 5e-3)
 
 # Aero data
-angle, speed, drag, lift, moment = rocket.getAeroData()
+angle, vel, drag, lift, moment = rocket.getAeroData()
 
 # Forces and moment
-Lift = rocket.getLift(speed, aoa)
-Drag = rocket.getDrag(speed, aoa)
-Speed, AoA = np.meshgrid(speed, aoa)
+Lift = rocket.getLift(aoa, speed)
+Drag = rocket.getDrag(aoa, speed)
+Moment = rocket.getMomentAboutCOM(aoa, speed)
+AoA, Speed = np.meshgrid(aoa, speed)
 
 # Surface
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
-ax.scatter(speed, angle, drag)
-ax.plot_surface(Speed, AoA, Drag, cmap=cm.coolwarm,
-                       lw=0, antialiased=False)
+ax.scatter3D(vel, angle, lift)
+ax.plot_surface(Speed, AoA, Lift, cmap=cm.coolwarm,
+                      lw=0, antialiased=False)
 
 ax.set_xlabel('Speed [mach]')
 ax.set_ylabel('AoA [degree]')
-ax.set_zlabel('Drag [N]')
+ax.set_zlabel('Lift [N]')
 plt.show()

@@ -355,13 +355,17 @@ class Motor:
     def getName(self):
         return self.__name
 
-    def getMass(self, t):
+    def getPropellantMass(self, t):
         if t <= self.__timeArray[0]:
-            return self.__frameMass + self.__initialPropellantMass
+            return self.__initialPropellantMass
         elif t >= self.__timeArray[-1]:
-            return self.__frameMass + self.__propellantMassList[-1]
+            return self.__propellantMassList[-1]
 
-        return self.__propellantMassFunction(t) + self.__frameMass
+        return self.__propellantMassFunction(t)
+
+    def getMass(self, t):
+        return self.getPropellantMass(t) + self.__frameMass
+
 
     def getInertiaMatrix(self, t):
         """
@@ -441,29 +445,25 @@ class Motor:
         propellantMassArray = self.__propellantMassList
         COMarray = np.array([self.getCOM(t) for t in timeList])
         # PLOT FORCE
-        plt.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
-        plt.title(r'Thrust during burn phase of %s' %self.__name)
-        plt.ylabel('thrust [N]')
-        plt.xlabel('time [s]')
-        plt.grid()
-        plt.legend(loc='best')
         plt.figure()
+        ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[N]')
+        ax1.plot(timeList, thrustArray, label='Thrust', c='r', lw='2')
+        ax1.set_title(r'Thrust during burn phase of %s' %self.__name)
+        ax1.grid()
+        ax1.legend(loc='best')
         # PLOT PROPELLANT MASS LOSS
-        plt.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
-        plt.title('Propellant mass during burn phase')
-        plt.ylabel('mass [kg]')
-        plt.xlabel('time [s]')
-        plt.grid()
-        plt.legend(loc='best')
-        plt.figure()
+        ax2 = plt.subplot(212, xlabel='time [s]', ylabel='[kg]')
+        ax2.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
+        ax2.set_title('Propellant mass during burn phase')
+        ax2.grid()
+        ax2.legend(loc='best')
+        plt.subplots_adjust(hspace=0.5)
         # PLOT COM OVER TIME
+        plt.figure()
         plt.plot(timeList, COMarray*100, label='COM', c='r', lw='2')
         plt.title('COM of %s during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
-        plt.ylabel('position [cm]')
-        plt.xlabel('time [s]')
         plt.grid()
         plt.legend(loc='best')
-        plt.figure()
         if show:
             plt.show()
 
