@@ -40,7 +40,10 @@ class Rocket:
         momentsArray_CG = args[9]
 
         print('\tInterpolating the drag force..')
-        self.__Dragforce = interp2d(AoAarray, freeAirStreamSpeeds, dragArray)
+        print(AoAarray)
+        print(freeAirStreamSpeeds)
+        print(dragArray)
+        self.__Dragforce = interp2d(AoAarray, freeAirStreamSpeeds, dragArray,kind='cubic')
         print('\tInterpolating the lift force..')
         self.__Liftforce = interp2d(AoAarray, freeAirStreamSpeeds, liftArray)
         print('\tInterpolating the moment about COM (component normal to aerodynamic plane)..')
@@ -55,7 +58,7 @@ class Rocket:
     def getMass(self, t):
         return self.__initMass + self.__motor.getMass(t) - self.__motor.getMass(0)
 
-    def getCOM(self, t):
+    def getCOMx(self, t):
         """
         :param t: [float] at time t [sec]
 
@@ -71,6 +74,9 @@ class Rocket:
 
         return 1/mass*(initMass*initCOM + (rocketLength - motorHeight/2)*(initMotorMass - motorMass))
 
+    def getCOM(self,t):
+        return np.array([self.getCOMx(t), 0, 0])
+
     def getLength(self):
         """
         :return: the length of the rocket [m]
@@ -78,7 +84,7 @@ class Rocket:
         return self.__length
 
     # Aero dynamics
-    def getDrag(self, speed, AoA):
+    def getDrag(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
@@ -87,7 +93,7 @@ class Rocket:
         """
         return self.__Dragforce(AoA, speed)
 
-    def getLift(self, speed, AoA):
+    def getLift(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
@@ -96,28 +102,29 @@ class Rocket:
         """
         return self.__Liftforce(AoA, speed)
 
-    def getMomentAboutCOM(self, speed, AoA):
+    def getMomentAboutCOM(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
         """
-        return self.__MomentAboutCOM(speed, AoA)
+        return self.__MomentAboutCOM(AoA, speed)
 
-    def getCOP(self, speed, AoA):
+    def getCOP(self, AoA, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The position of COP relative to nose tip [m]
         """
-        Fd = self.getDrag(speed, AoA)
-        Fl = self.getLift(speed, AoA)
-        M = self.getMomentAboutCOM(speed, AoA)
+        Fd = self.getDrag(AoA, speed)
+        Fl = self.getLift(AoA, speed)
+        M = self.getMomentAboutCOM(AoA, speed)
         COM_0 = self.getCOM(0)
-
-        return COM_0 - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
+        COPx = COM_0[0] - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
+        COPx = COPx[0]
+        return np.array([COPx, 0, 0])
 
     def getInertiaMatrix(self, t):
         """
@@ -129,15 +136,15 @@ class Rocket:
         # TODO Add inertia for axial burning fuel.
         I0 = self.__initInertiaMatrix
         rInitMass = self.__initMass
-        rInitCOM = self.__initCOM
-        rCOM = self.getCOM(t)
+        rInitCOMx = self.__initCOM
+        rCOMx = self.getCOMx(t)
         mInitMass = self.__motor.getMass(0)
-        mInitCOM = self.__motor.getCOM(0)
+        mInitCOMx = self.__motor.getCOMx(0)
         mInitInertia = self.__motor.getInertiaMatrix(0)
         mMass = self.__motor.getMass(t)
         mInertia = self.__motor.getInertiaMatrix(t)
-        deltaR = rCOM - rInitCOM
-        deltaM = rCOM + mInitCOM + self.getLength()
+        deltaR = rCOMx - rInitCOMx
+        deltaM = rCOMx + mInitCOMx + self.getLength()
         return I0 + rInitMass*np.diag([0, deltaR**2, deltaR**2]) + (mInertia - mInitInertia) + (
                     mMass - mInitMass)*np.diag([0, deltaM**2, deltaM**2])
 
@@ -284,4 +291,3 @@ class Rocket:
 
         return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed,
                       alpha, drag, lift, moment)
-

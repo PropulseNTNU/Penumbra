@@ -27,7 +27,7 @@ def gravity(rocket, t):
     :param t: [float] point in time [s]
     :return: [np.array] gravity vector in the inertial frame [N].
     """
-    return np.array([0, 0, -rocket.getMass(t)*g])
+    return np.array([0, 0, rocket.getMass(t)*g])
 
 
 def thrust(rocket, t):

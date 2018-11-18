@@ -4,33 +4,18 @@ Rocket tests
   Given a rocket file, plot all rocket quantities and see if they are reasonable
 
 Forces tests
-  Given a trajectory, find the forces at each time step and plot them.
-  See if the results are reasonable
+  Given a trajectory, find the forces at each time step and plot them. DONE
+  See if the results are reasonable. DONE
 
 Trajectory tests
-  Check rotation matrices
-  Check matrix multiplications. Change to @
-  check initialInclination
-  check initialQuaternion
-  Check N, the length of the simulation intervals
-  Are the lengths of the arrays right?
+  Check rotation matrices. DONE
+  Check matrix multiplications. Change to @. DONE
+  check initialInclination. DONE
+  check initialQuaternion. DONE
+  Check N, the length of the simulation intervals. DONE
+  Are the lengths of the arrays right? DONE
 
 Simulator tests
-  One general test
-  Plot all results
-  See if they are reasonable
-
-
-
-Nuclino:
-  Equations of motion
-  Rotations
-  Conventions
-
-  #trajectory = spintegrate.ode(rhsEquationsOfMotion).set_integrator('zvode', method='bdf')
-  #trajectory.set_initial_value(x0,0).set_f_params(rocket)
-  #tEnd = 200
-  #dt = 0.01
-  #while trajectory.successful() and trajectory.t < tEnd:
-  #    trajectory.integrate(trajectory.t+dt)
-  #    print("%g %g" % (trajectory.t, trajectory.y))
+  One general test DONE
+  Plot all results DONE
+  See if they are reasonable DONE

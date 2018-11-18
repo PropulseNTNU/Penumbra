@@ -1,5 +1,5 @@
 initial_mass = 20e3
-initial_moi = 1e9, 5e9, 5e9
+initial_moi = 0.1e9, 16e9, 16e9
 initial_com = -1.3e3
 length = 2.5e3
 motor = ../Motors/CesaroniM1800.dot
