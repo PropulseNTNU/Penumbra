@@ -164,7 +164,7 @@ class Rocket:
         time = self.__time
         burnTime = self.__motor.getBurnTime()
         print('Creating plot of COM and mass...')
-        COM = np.array([self.getCOM(t) for t in time])
+        COM = np.array([self.getCOMx(t) for t in time])
         mass = np.array([self.getMass(t) for t in time])
         plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[cm]')

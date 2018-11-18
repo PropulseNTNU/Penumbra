@@ -446,7 +446,7 @@ class Motor:
         timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
         thrustArray = self.__thrustFunction(timeList)
         propellantMassArray = self.__propellantMassList
-        COMarray = np.array([self.getCOM(t) for t in timeList])
+        COMarray = np.array([self.getCOMx(t) for t in timeList])
         # PLOT FORCE
         plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[N]')
