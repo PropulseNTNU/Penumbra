@@ -123,7 +123,7 @@ class Nose:
     def getNoseType(self):
         return self.__noseType
 
-    def getCOM(self):
+    def getCOMx(self):
         if self.__noseType == noseTypes[0]:
             V = self.getVolume()
             d = self.__thickness
@@ -222,7 +222,7 @@ class Body:
         Izz = Iyy
         return np.diag([Ixx, Iyy, Izz])
 
-    def getCOM(self):
+    def getCOMx(self):
         l = self.__length
         return -l/2  # COM relative to top of body
 
@@ -388,7 +388,7 @@ class Motor:
         return np.diag([Ixx, Iyy, Izz])
         #TODO implement MOI for motor with axial fuel burn.
 
-    def getCOM(self, t, fuelBurnRadially=True):
+    def getCOMx(self, t, fuelBurnRadially=True):
 
         l = self.__length
         # If fuel burns radially, quickly return the well know solution (relative to top of motor)
@@ -407,6 +407,9 @@ class Motor:
             Mtot = propMass + frameMass
 
         return -1/Mtot*(frameMass + propMass**2/self.__initialPropellantMass)*l/2  # COM relative to top of motor
+
+    def getCOM(self, t, fuelBurnRadially=True):
+        return np.array([self.getCOMx(t,fuelBurnRadially), 0, 0])
 
     def getLength(self):
         return self.__length

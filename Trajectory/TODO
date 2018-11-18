@@ -1,0 +1,15 @@
+Make better plots
+Transform trajectory to a class ?
+Implement better integration method
+Implement adaptive integration method (for transition from launch ramp to free motion)
+Make LaTeX file with all formulas
+
+Difference between COM and COMx
+
+#trajectory = spintegrate.ode(rhsEquationsOfMotion).set_integrator('zvode', method='bdf')
+#trajectory.set_initial_value(x0,0).set_f_params(rocket)
+#tEnd = 200
+#dt = 0.01
+#while trajectory.successful() and trajectory.t < tEnd:
+#    trajectory.integrate(trajectory.t+dt)
+#    print("%g %g" % (trajectory.t, trajectory.y))

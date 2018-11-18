@@ -57,7 +57,7 @@ class Rocket:
     def getMass(self, t):
         return self.__initMass + self.__motor.getMass(t) - self.__motor.getMass(0)
 
-    def getCOM(self, t):
+    def getCOMx(self, t):
         """
         :param t: [float] at time t [sec]
 
@@ -72,6 +72,9 @@ class Rocket:
         motorMass = self.getMotor().getMass(t)
 
         return 1/mass*(initMass*initCOM + (rocketLength - motorHeight/2)*(initMotorMass - motorMass))
+
+    def getCOM(self,t):
+        return np.array([self.getCOMx(t), 0, 0])
 
     def getLength(self):
         """
@@ -118,8 +121,9 @@ class Rocket:
         Fl = self.getLift(AoA, speed)
         M = self.getMomentAboutCOM(AoA, speed)
         COM_0 = self.getCOM(0)
-
-        return COM_0 - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
+        COPx = COM_0[0] - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
+        COPx = COPx[0]
+        return np.array([COPx, 0, 0])
 
     def getAeroData(self):
         return self.__AoAarray, self.__freeAirStreamSpeeds, self.__dragArray, self.__liftArray, self.__momentsArray_CG
@@ -139,15 +143,15 @@ class Rocket:
         # TODO Add inertia for axial burning fuel.
         I0 = self.__initInertiaMatrix
         rInitMass = self.__initMass
-        rInitCOM = self.__initCOM
-        rCOM = self.getCOM(t)
+        rInitCOMx = self.__initCOM
+        rCOMx = self.getCOMx(t)
         mInitMass = self.__motor.getMass(0)
-        mInitCOM = self.__motor.getCOM(0)
+        mInitCOMx = self.__motor.getCOMx(0)
         mInitInertia = self.__motor.getInertiaMatrix(0)
         mMass = self.__motor.getMass(t)
         mInertia = self.__motor.getInertiaMatrix(t)
-        deltaR = rCOM - rInitCOM
-        deltaM = rCOM + mInitCOM + self.getLength()
+        deltaR = rCOMx - rInitCOMx
+        deltaM = rCOMx + mInitCOMx + self.getLength()
         return I0 + rInitMass*np.diag([0, deltaR**2, deltaR**2]) + (mInertia - mInitInertia) + (
                     mMass - mInitMass)*np.diag([0, deltaM**2, deltaM**2])
 
@@ -295,4 +299,3 @@ class Rocket:
 
         return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed,
                       alpha, drag, lift, moment)
-
