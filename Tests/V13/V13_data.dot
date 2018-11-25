@@ -1,0 +1,20 @@
+Mass properties of Propulse Rocket Sim v.3
+     Configuration: Default
+     Coordinate system: -- default --
+
+Initial mass of rocket: ( grams )
+initial_mass = 26008
+
+Center of mass: ( millimeters )
+initial_com = -1438
+
+Length of rocket: ( millimeters )
+length = 2450
+
+Moments of inertia: ( grams *  square millimeters )
+Taken at the center of mass and aligned along principle axes.
+initial_moi = 0.1173e9, 12.954e9, 12.954e9
+
+Motor:
+motor = ../Motors/CesaroniM1450.dot
+

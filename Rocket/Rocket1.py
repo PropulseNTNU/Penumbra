@@ -455,9 +455,9 @@ class Motor:
         ax1.grid()
         ax1.legend(loc='best')
         # PLOT PROPELLANT MASS LOSS
-        ax2 = plt.subplot(212, xlabel='time [s]', ylabel='[kg]')
-        ax2.plot(timeList, propellantMassArray, label='propellant mass', c='b', lw='2')
-        ax2.set_title('Propellant mass during burn phase')
+        ax2 = plt.subplot(212, xlabel='time [s]', ylabel='[g]')
+        ax2.plot(timeList, propellantMassArray*1e3, label='propellant mass', c='b', lw='2')
+        ax2.set_title('Propellant mass')
         ax2.grid()
         ax2.legend(loc='best')
         plt.subplots_adjust(hspace=0.5)
@@ -735,18 +735,3 @@ class RocketSimple:
         payload = Payload.from_file(path + payloadFile)
 
         return RocketSimple(nose, body, fin, eval(numberOfFins), motor, payload, partsPlacement)
-
-
-def find_parameter(file, parameter):
-    File = open(file, 'r')
-    arr = ["", ""]
-    while arr[0] != parameter.lower():
-        base = File.readline()
-        if base == '':
-            print("ERROR: Could not find parameter '" + parameter + "' in '" + file + "'.")
-            return False
-        base = base.replace(" ", "")
-        base = base.replace("\n", "")
-        arr = base.split("=")
-    File.close()
-    return arr[1]

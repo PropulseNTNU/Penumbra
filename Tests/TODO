@@ -1,7 +1,7 @@
 List of tests
 
 Rocket tests
-  Given a rocket file, plot all rocket quantities and see if they are reasonable
+  Given a rocket file, plot all rocket quantities and see if they are reasonable DONE
 
 Forces tests
   Given a trajectory, find the forces at each time step and plot them. DONE

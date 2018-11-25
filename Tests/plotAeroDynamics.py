@@ -14,8 +14,8 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 
 
-sample_file = 'full_report_edited.dot'
-init_file = 'mass_properties_rocket_v9_edited.dot'
+sample_file = 'V9_CFD.txt'
+init_file = 'V9_data.dot'
 path = 'V9/'
 rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
 

@@ -1,11 +1,8 @@
 Forces.py
     Write IAM
     Write CAM
-    TODO: define the state vector
-        CONCLUSION:
-        [x, y, z, vx, vy, vz, phi, theta, psi, ]
 
-    TODO: Ask team how COM and COP should be calculated for simple rocket class
+    TODO: Ask team how COM and COP should be calculated for simple rocket class DONE 
         CONCLUSION:
         By using the definition of COM and Barrowman for COP.
 

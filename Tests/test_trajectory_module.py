@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 def test_trajectory_module():
     rad2deg = 180/np.pi
-    sample_file = 'full_report_edited.dot'
-    init_file = 'mass_properties_rocket_v9_edited.dot'
+    sample_file = 'V9_CFD.txt'
+    init_file = 'V9_data.dot'
     path = 'V9/'
     rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
     initialInclination = 6.0/180.0*np.pi

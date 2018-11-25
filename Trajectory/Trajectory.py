@@ -10,7 +10,7 @@ import Kinematics
 import Rocket2 as Rocket
 from scipy.constants import g
 
-epsilon = e-10
+epsilon = 1e-10
 
 def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime):
     # x is the state of the vector
@@ -85,11 +85,12 @@ def equationsMotion(rocket, x, t, launchRampLength, initialDirection):
     dirWindVelocity = (windVelocity/(np.linalg.norm(windVelocity) + epsilon))
     AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
     dirDragBody = RotationInertial2Body @ dirWindVelocity
-    drag = -rocket.getDrag(AoA, airSpeed)*dirDragBody
-    projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2])
+    aeroForces = rocket.getAeroForces(AoA, airSpeed)
+    drag = -aeroForces[0]*dirDragBody
+    projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
-    dirLiftBody = sin(alpha)*np.array([1, 0, 0]) + cos(alpha)*dirProjectedDragBody
-    lift = rocket.getLift(AoA, airSpeed) @ dirLiftBody
+    dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
+    lift = aeroForces[1]*dirLiftBody
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
     H = Kinematics.TransformationMatrix(rocket.getCOM(t))

@@ -10,9 +10,10 @@ from Rocket1 import RocketSimple
 # myRocket1.printSpecifications(0)
 
 # FOR ROCKET CLASS 2
-sample_file = 'full_report_edited.dot'
-init_file = 'mass_properties_rocket_v9_edited.dot'
-path = 'V9/'
+sample_file = 'V13_CFD.txt'
+init_file = 'V13_data.dot'
+path = 'V13/'
 rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
 rocket.plot()
 #rocket.getMotor().plotPerformance()
+
