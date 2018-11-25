@@ -10,6 +10,8 @@ import Kinematics
 import Rocket2 as Rocket
 from scipy.constants import g
 
+epsilon = e-10
+
 def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime):
     # x is the state of the vector
     # x = [position, quaternion, linear velocity, angular velocity]
@@ -75,11 +77,19 @@ def equationsMotion(rocket, x, t, launchRampLength, initialDirection):
     # forces in the body frame
     thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
     gravity = RotationInertial2Body @ np.array([0, 0, rocket.getMass(t)*g])
-    AoA = 0
-    #xAxisBody = RotationBody2Inertial[:,0]
-    airSpeed = np.linalg.norm(linearVelocity)
-    drag = -1*np.linalg.norm(airSpeed)**2*np.array([1,0,0])
-    lift = rocket.getLift(AoA, airSpeed)*np.array([0,0,0])
+    # aerodynamic forces
+    windVelocity = np.array([0, 0, 0])
+    airVelocity = linearVelocity - windVelocity
+    airSpeed = np.linalg.norm(airVelocity)
+    xAxisBody = RotationBody2Inertial[:,0]
+    dirWindVelocity = (windVelocity/(np.linalg.norm(windVelocity) + epsilon))
+    AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
+    dirDragBody = RotationInertial2Body @ dirWindVelocity
+    drag = -rocket.getDrag(AoA, airSpeed)*dirDragBody
+    projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2])
+    dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
+    dirLiftBody = sin(alpha)*np.array([1, 0, 0]) + cos(alpha)*dirProjectedDragBody
+    lift = rocket.getLift(AoA, airSpeed) @ dirLiftBody
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
     H = Kinematics.TransformationMatrix(rocket.getCOM(t))

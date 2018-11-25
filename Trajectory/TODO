@@ -3,6 +3,7 @@ Transform trajectory to a class ?
 Implement better integration method
 Implement adaptive integration method (for transition from launch ramp to free motion)
 Make LaTeX file with all formulas
+Nonzero AoA
 
 Difference between COM and COMx
 
