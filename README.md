@@ -1,4 +1,4 @@
-# RocketSimulator
+# Penumbra
 An original rocket simulator developed by the simulation group at Propulse NTNU.
 
 Prerequisites to use simulator:
