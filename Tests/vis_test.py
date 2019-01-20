@@ -24,7 +24,25 @@ def run(int_inclination, ramp_length, time_step, sim_time):
     = Trajectory.calculateTrajectory(rocket, int_inclination, ramp_length, time_step, sim_time)
 
     sample_rate = 1 / time_step
-    print(position)
-    visual.launch(sample_rate, position, euler)
+
+    t = 0
+    COM = []
+    COP = []
+    time_domain = []
+    while t < sim_time:
+        time_domain = time_domain + [t]
+        t += time_step
+
+    for t in time_domain:
+        COM = COM + [rocket.getCOM(t)[0]]
+    for i in range(len(AoA)):
+        print(np.linalg.norm(linearVelocity[i]))
+        COP = COP + [rocket.getCOP(AoA[i], np.linalg.norm(linearVelocity[i]))[0]]
+    print(COP)
+
+    print('Thrust',thrust, 'Gravity', gravity, 'Drag', drag, 'Lift', lift, sep='\n')
+
+
+    visual.launch(sample_rate, position, euler, COM, COP, thrust, gravity, lift, drag)
 
 run(6, 520, 0.05, 60)
