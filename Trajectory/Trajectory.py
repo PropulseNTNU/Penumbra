@@ -82,17 +82,18 @@ def equationsMotion(rocket, x, t, launchRampLength, initialDirection):
     airVelocity = linearVelocity - windVelocity
     airSpeed = np.linalg.norm(airVelocity)
     xAxisBody = RotationBody2Inertial[:,0]
-    dirWindVelocity = (windVelocity/(np.linalg.norm(windVelocity) + epsilon))
+    dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
     AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
     dirDragBody = RotationInertial2Body @ dirWindVelocity
-    aeroForces = rocket.getAeroForces(AoA, airSpeed)
+    aeroForces = rocket.getAeroForces(AoA, position, airSpeed)
     drag = -aeroForces[0]*dirDragBody
     projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
-    lift = aeroForces[1]*dirLiftBody
+    lift = -aeroForces[1]*dirLiftBody
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
+    print(lift)
     H = Kinematics.TransformationMatrix(rocket.getCOM(t))
     m = rocket.getMass(t)
     I = rocket.getInertiaMatrix(t)
@@ -106,7 +107,7 @@ def equationsMotion(rocket, x, t, launchRampLength, initialDirection):
         totalForce = np.array([totalForce[0], 0, 0])
         totalMoment = np.array([0, 0, 0])
     else:
-        arm = rocket.getCOP(AoA,airSpeed) - rocket.getCOM(t)
+        arm = rocket.getCOP(AoA) - rocket.getCOM(t)
         totalMoment = np.cross(arm, drag + lift)
     genForceBody = H.T @ np.concatenate((totalForce, totalMoment))
     # find dx

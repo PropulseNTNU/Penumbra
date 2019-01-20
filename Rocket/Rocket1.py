@@ -6,6 +6,10 @@ Last edit: 17.11.2018
 
 --Propulse NTNU--
 """
+import sys
+sys.path.append('../Forces/')
+import Forces as Forces
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
@@ -17,7 +21,7 @@ plt.rc('font', **font)
 plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 # Geometry types
-noseTypes = ['cone', 'hemisphere', 'Von Karman']
+noseTypes = ['cone', 'hemisphere', 'ogive']
 
 class Nose:
 
@@ -26,7 +30,7 @@ class Nose:
         # Member variables
         self.__noseType = noseType
 
-        if noseType == noseTypes[0]:  # Conic
+        if noseType == noseTypes[0] or noseType == noseTypes[2]:  # Conic or Ogive
             self.__diameter = args[0]
             self.__length = args[1]
             self.__thickness = args[2]
@@ -65,14 +69,13 @@ class Nose:
             R2 = self.__diameter/2
             R1 = R2 - d
             return 2/3*np.pi*(R2**3 - R1**3)
-        elif self.__noseType == noseTypes[2]:  # Von Karmen
+        elif self.__noseType == noseTypes[2]:  # Ogive
             d = self.__thickness
             R2 = self.__diameter/2
             H2 = self.__length
             H1 = H2 - d
             R1 = R2*H1/H2
             return ((3*np.pi**2)/32)*R2**2*H2-((3*np.pi**2)/32)*R1**2*H1
-
 
     def getCavityVolum(self):
         if self.__noseType == noseTypes[0]:  # Conic
@@ -87,7 +90,7 @@ class Nose:
             R2 = self.__diameter/2
             R1 = R2 - d
             return 2/3*np.pi*R1**3
-        elif self.__noseType == noseTypes[2]:  # Von Karmen
+        elif self.__noseType == noseTypes[2]:  # Ogive
             d = self.__thickness
             R2 = self.__diameter/2
             H2 = self.__length
@@ -101,29 +104,33 @@ class Nose:
         elif self.__noseType == noseTypes[1]:
             return self.__diameter/2
 
+    def getDiameter(self):
+        return self.__diameter
+
     def getMass(self):
         return self.__density*self.getVolume()
 
     def getInertiaMatrix(self):
-        if self.__noseType == noseTypes[0]:  # Conic
+        if self.__noseType == noseTypes[0] or self.__noseType == noseTypes[2]:  # Conic and Ogive
             r = self.__diameter/2
             m = self.getMass()
             Ixx = 1/2*m*r**2
-            Iyy = 3*Ixx - m*self.getCOM()**2
+            Iyy = 3*Ixx - m*self.getCOM()[0]**2
             Izz = Iyy
             return np.diag([Ixx, Iyy, Izz])
-        elif self.__noseType == noseTypes[1]:
+        elif self.__noseType == noseTypes[1]:  # Hemisphere
             r = self.__diameter/2
             m = self.getMass()
             Ixx = 2/3*m*r**2
-            Iyy = 3*Ixx - m*self.getCOM()**2
+            Iyy = 3*Ixx - m*self.getCOM()[0]**2
             Izz = Iyy
             return np.diag([Ixx, Iyy, Izz])
 
     def getNoseType(self):
         return self.__noseType
 
-    def getCOMx(self):
+    def getCOM(self):
+        COM = 0
         if self.__noseType == noseTypes[0]:
             V = self.getVolume()
             d = self.__thickness
@@ -132,12 +139,12 @@ class Nose:
             H1 = H2 - d
             R1 = R2*H1/H2
             a = 1/2*H2**2 - 2*H2**3/(3*H1) + H2**4/(4*H1**2)
-            return np.pi/V*((H2*R2)**2/12 - a*R1**2)  # COM relative to bottom surface of nose
+            COM = np.pi/V*((H2*R2)**2/12 - a*R1**2)
         elif self.__noseType == noseTypes[1]:
             d = self.__thickness
             R2 = self.__diameter/2
             R1 = R2 - d
-            return 3/8*(R2**4 - R1**4)/(R2**3 - R1**3)  # COM relative to bottom surface of nose
+            COM = 3/8*(R2**4 - R1**4)/(R2**3 - R1**3)
         elif self.__noseType == noseTypes[2]:
             V = self.getVolume()
             d = self.__thickness
@@ -145,14 +152,16 @@ class Nose:
             H2 = self.__length
             H1 = H2 - d
             R1 = R2*H1/H2
-            return ((32/(15*np.pi)) * (H2**2 * R2**2 - H1**2 * R1**2)
-            /(H2 * R2**2 - H1 * R1**2) - (H2/2)) # COM relative to bottom surface of nose
+            COM = ((32/(15*np.pi)) * (H2**2 * R2**2 - H1**2 * R1**2)
+            /(H2 * R2**2 - H1 * R1**2) - (H2/2))
+        # COM relative to bottom surface of nose
+        return np.array([COM, 0, 0])
 
     @staticmethod
     def from_file(file):
         noseType = find_parameter(file, "nose_type")
 
-        if noseType.lower() == noseTypes[0]:  # Conic
+        if noseType.lower() == noseTypes[0] or noseType.lower() == noseTypes[2]:  # Conic or Ogive
             diameter = find_parameter(file, "diameter")
             length = find_parameter(file, "length")
             density = find_parameter(file, "density")
@@ -222,9 +231,9 @@ class Body:
         Izz = Iyy
         return np.diag([Ixx, Iyy, Izz])
 
-    def getCOMx(self):
+    def getCOM(self):
         l = self.__length
-        return -l/2  # COM relative to top of body
+        return np.array([-l/2, 0, 0])  # COM relative to top of body
 
     @staticmethod
     def from_file(file):
@@ -295,7 +304,7 @@ class Fin:
         l1 = self.__rootChord
         l2 = self.__tipChord
         a = self.__angle
-        return -(cord/np.tan(a) + 3/4*(l2 - l1))  # COM relative to top edge of fin
+        return np.array([-(cord/np.tan(a) + 3/4*(l2 - l1)), 0, 0])  # COM relative to top edge of fin
 
     @staticmethod
     def from_file(file):
@@ -388,12 +397,11 @@ class Motor:
         return np.diag([Ixx, Iyy, Izz])
         #TODO implement MOI for motor with axial fuel burn.
 
-    def getCOMx(self, t, fuelBurnRadially=True):
-
+    def getCOM(self, t, fuelBurnRadially=True):
         l = self.__length
         # If fuel burns radially, quickly return the well know solution (relative to top of motor)
         if fuelBurnRadially:
-            return -l/2
+            return np.array([-l/2, 0, 0])
 
         frameMass = self.__frameMass
         propMass = self.__initialPropellantMass
@@ -406,10 +414,8 @@ class Motor:
             propMass = self.__propellantMassFunction(t)
             Mtot = propMass + frameMass
 
-        return -1/Mtot*(frameMass + propMass**2/self.__initialPropellantMass)*l/2  # COM relative to top of motor
-
-    def getCOM(self, t, fuelBurnRadially=True):
-        return np.array([self.getCOMx(t,fuelBurnRadially), 0, 0])
+        COM = -1/Mtot*(frameMass + propMass**2/self.__initialPropellantMass)*l/2  # COM relative to top of motor
+        return np.array([COM, 0, 0])
 
     def getLength(self):
         return self.__length
@@ -446,7 +452,7 @@ class Motor:
         timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
         thrustArray = self.__thrustFunction(timeList)
         propellantMassArray = self.__propellantMassList
-        COMarray = np.array([self.getCOMx(t) for t in timeList])
+        COMarray = np.array([self.getCOM(t)[0] for t in timeList])
         # PLOT FORCE
         plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[N]')
@@ -542,12 +548,12 @@ class RocketSimple:
 
         # COM
         print("\tCalculating rocket COM (relative to rocket origin)..")
-        self.__noseCOM = nose.getCOM() - nose.getLength()
-        self.__bodyCOM = body.getCOM() - nose.getLength()
+        self.__noseCOM = nose.getCOM()[0] - nose.getLength()
+        self.__bodyCOM = body.getCOM()[0] - nose.getLength()
         # Assuming placement of fin is position of top edge relative to body top
-        self.__finCOM = partsPlacement[0] + fin.getCOM() - nose.getLength()
+        self.__finCOM = partsPlacement[0] + fin.getCOM()[0] - nose.getLength()
         # Assuming placement of motor is at bottom of rocket (motor bottom align with body bottom)
-        self.__motorCOM = motor.getLength() + motor.getCOM(0) - body.getLength() - nose.getLength()
+        self.__motorCOM = motor.getLength() + motor.getCOM(0)[0] - body.getLength() - nose.getLength()
         # Assuming placement of payload is its COM relative to body top
         self.__payloadCOM = partsPlacement[1] - nose.getLength()
         self.__COMofRocketStructure = np.array([self.__noseCOM, self.__bodyCOM, self.__finCOM,
@@ -557,32 +563,41 @@ class RocketSimple:
         self.__COM = (self.__rocketStructureCOM*self.__rocketMass + self.__motorCOM*self.__motorMass)/self.__mass
 
         # Nose COP
-        print("\tCalculating rocket COP (relative to rocket origin)..")
-        Xnose = 0
-        CNnose = 2  # Barrowman
+        self.__Xnose = 0
         if nose.getNoseType() == noseTypes[0]:  # Conic
-            Xnose = -0.666*nose.getLength()
-        elif nose.getNoseType() == noseTypes[1]:  # Hemisphere
-            Xnose = -0.446*nose.getLength()
-        self.__noseCOP = Xnose
+            self.__Xnose = -0.666*nose.getLength()
+            self.__CNnose = 2
+        elif nose.getNoseType() == noseTypes[1] or nose.getNoseType() == noseTypes[2]:  # Hemisphere or Ogive
+            self.__Xnose = -0.446*nose.getLength()
+            self.__CNnose = 1
+        self.__Xcp_nose = self.__Xnose
+
+        # Body COP
+        Aref = np.pi*(body.getDiameter()/2)**2  # Crossection of body
+        Aplan_body = body.getDiameter()*body.getLength()
+        Aplan_nose = 2/3*nose.getLength()*nose.getDiameter()
+        Xplan_body = nose.getLength() + 1/2*body.getLength()
+        Xplan_nose = 5/8*nose.getLength()
+        Aplan_total = Aplan_body + Aplan_nose
+        self.__Xcp_body = -(Xplan_body*Aplan_body + Xplan_nose*Aplan_nose)/Aplan_total
+        self.__CNbody = Aplan_total/Aref
 
         # Fin COP
         R = body.getDiameter()/2  # Radius of body
         SC = fin.getSemiChord()  # Semi chord of fins
         RC = fin.getRootChord()
         TC = fin.getTipChord()
-        alpha = fin.getTopEdgeAngle()*np.pi/180.0
+        theta = fin.getTopEdgeAngle()*np.pi/180.0 # TopEdgeAngle is in degrees
         y = SC*(2*TC + RC)/(3*(TC + RC))
-        Lf = np.sqrt(SC**2 + (SC/np.tan(alpha) + 1/2*(TC - RC))**2)
-        CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*Lf/(RC + TC))**2)))
+        Lf = np.sqrt(SC**2 + (SC/np.tan(theta) + 1/2*(TC - RC))**2)
+        self.__CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*Lf/(RC + TC))**2)))
         Xb = partsPlacement[0] - nose.getLength()
-        Xr = -SC/np.tan(alpha)
+        Xr = -SC/np.tan(theta)
         Xf = Xb + Xr/3*(RC + 2*TC)/(RC + TC) - 1/6*((RC + TC) - RC*TC/(RC + TC))
-        self.__finCOP = Xf
-
-        # FINAL ROCKET COP
-        CNrocket = CNnose + CNfin
-        self.__COP = (CNnose*Xnose + CNfin*Xf)/CNrocket
+        self.__Xcp_fin = Xf
+        print(self.__Xcp_nose, self.__CNnose)
+        print(self.__Xcp_body, self.__CNbody)
+        print(self.__Xcp_fin, self.__CNfin)
 
         print("\tCalculating inertia matrix of rocket..")
         # MOMENT OF INERTIA (about rocket axes with origin at COM, calculated with parallel axis thm)
@@ -598,11 +613,11 @@ class RocketSimple:
         self.__InertiaMatrix = self.__rocketStructureMOI + motorMOI
 
         # TOTAL LENGTH OF ROCKET
-        self.__length = nose.getLength() - partsPlacement[0] + SC/np.tan(alpha) + TC
+        self.__length = nose.getLength() - partsPlacement[0] + SC/np.tan(theta) + TC
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter() + 2*SC
         # FORCE COEFFICIENTS
-        self.__Cd = 1
+        self.__Cd = 0.5
         print("Rocket initialized!")
         self.printSpecifications(0)
 
@@ -628,53 +643,101 @@ class RocketSimple:
         return self.__mass
 
     def getInertiaMatrix(self, t):
-        self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t) - self.__rocketStructure[
+        self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t)[0] - self.__rocketStructure[
             0].getLength() - self.__rocketStructure[1].getLength()
         motorMass = self.getMotor().getMass(t)
-        motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.getCOM(t) - self.__motorCOM)**2
+        motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.getCOM(t)[0] - self.__motorCOM)**2
         self.__InertiaMatrix = self.__rocketStructureMOI + motorMOI
         return self.__InertiaMatrix
 
-    def getTotalLength(self):
+    def getLength(self):
         return self.__length
 
-    def getTotalWidth(self):
+    def getWidth(self):
         return self.__width
 
     def getCOM(self, t):
         mass = self.getMass(t)
-        self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t) - self.__rocketStructure[
+        self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t)[0] - self.__rocketStructure[
             0].getLength() - self.__rocketStructure[1].getLength()
         motorMass = self.getMotor().getMass(t)
         self.__COM = (self.__rocketStructureCOM*self.__rocketMass + self.__motorCOM*motorMass)/mass
-        return self.__COM
+        return np.array([self.__COM, 0, 0])
 
     def getCOMofParts(self):
         return self.__COMofRocketStructure
 
     # Aerodynamics
-    def getCOP(self):
-        return self.__COP
+    def getCOP(self, AoA):
+        """
+        :param AoA: [float] the angle of attack [rad]
+
+        :return: [np.array] Position of COP relative to nose tip
+        """
+        #Nose, Body and Fins Cn
+        CNnose = self.__CNnose*np.sinc(AoA/np.pi) # np.sinc(x) = sin(pi*x)/(pi*x)
+        CNfin = self.__CNfin*np.sinc(AoA/np.pi)
+        CNbody = self.__CNbody*np.sin(AoA)**2
+        CNrocket = CNnose + CNbody + CNfin
+        COP0 = (CNnose*self.__Xcp_nose + CNbody*self.__Xcp_body + CNfin*self.__Xcp_fin)/CNrocket
+        return np.array([COP0, 0, 0])
+
+    def getStabilityMargin(self, AoA, t=0):
+        COM = self.getCOM(t)[0]
+        COP = self.getCOP(AoA)[0]
+        return COM - COP
+
+    def getAeroForces(self, AoA, position, speed):
+        """
+        :param speed: [float] speed of air relative to rocket [m/s]
+        :param AoA: [float] the angle of attack [rad]
+
+        :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
+        """
+        drag = Forces.SAMdrag(self, position, speed)
+        lift = Forces.SAMlift(self, position, speed, AoA)
+        return np.array([drag, lift])
+
+    def getMomentAboutCOM(self, position, velocity, AoA):
+        """
+        :param velocity: [float] the air speed relative to rocket [m/s]
+        :param AoA: [float] the angle of attack [rad]
+
+        :return: [float] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
+        """
+        drag = Forces.SAMdrag(self, position, velocity, AoA)*velocity/lin
+        return self.__MomentAboutCOM(AoA, speed)
 
     def getCd(self):
         return self.__Cd
+
+    def getCn(self, AoA):
+        #Nose, Body and Fins Cn
+        CNnose = self.__CNnose*np.sinc(AoA/np.pi)
+        CNfin = self.__CNfin*np.sinc(AoA/np.pi)
+        CNbody = self.__CNbody*np.sin(AoA)**2
+        # FINAL ROCKET COP
+        CNrocket = CNnose + CNbody + CNfin
+        return CNrocket
 
     # Set functions
     def setCd(self, Cd):
         self.__Cd = Cd
 
     # auxiliary
-    def printSpecifications(self, t):
+    def printSpecifications(self, t, AoA=0):
         Mass = self.getMass(t)
         motorCOM = self.__motorCOM + self.getMotor().getCOM(t) - self.getMotor().getCOM(0)
-        COM = self.getCOM(t)
-        COP = self.getCOP()
+        COM = self.getCOM(t)[0]
+        COP = self.getCOP(AoA)[0]
+        stability_margin = self.getStabilityMargin(AoA)/self.getBody().getDiameter()
         MOI = self.getInertiaMatrix(t)
         Cd = self.getCd()
+        Cn = self.getCn(AoA)
         partsCOM = np.append(self.getCOMofParts(), motorCOM)
         partNames = ['Nose', 'Body', 'Fins', 'Payload', 'Motor']
-        length = self.getTotalLength()
-        width = self.getTotalWidth()
+        length = self.getLength()
+        width = self.getWidth()
         N = self.__N  # Number of fins
         dots = 33*'-'
 
@@ -687,11 +750,14 @@ class RocketSimple:
         print("Length: %1.2f m" % length)
         print("Width: %1.2f m" % width)
         print("Number of fins: %d" % N)
+        print("Drag coeff: %1.3f" % Cd)
+        print("Lift coeff: %1.3f" % Cn)
         print("Center of mass of: ")
         for i in range(len(partNames)):
             print("\t%s: %1.2f m" % (partNames[i], partsCOM[i]))
         print("Center of mass of rocket: %1.2f m" % COM)
         print("Center of pressure of rocket: %1.2f m" % COP)
+        print("Stability margin: %1.2f" % (stability_margin)) # In body calibers
         print(dots)
 
     @staticmethod

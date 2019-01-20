@@ -6,6 +6,10 @@ Last edit: 17.11.2018
 
 --Propulse NTNU--
 """
+import sys
+sys.path.append('../Forces/')
+import Forces as Forces
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
@@ -93,34 +97,40 @@ class Rocket:
         return self.__length
 
     # Aero dynamics
-    def getAeroForces(self, AoA, speed):
+    def getAeroForces(self, AoA, position, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
+        :param position: [np.array] The position vector in world coordinates
         :param AoA: [float] the angle of attack [rad]
 
-        :return: [np.array] ([drag],
-                             [lift]) on rocket attacking in COP [N]
+        :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
+        z = abs(position[2])  # Vertical position of rocket
+        density_reduction = np.exp(-z/Forces.h)  # Account for decreasing air density
         drag = self.__Dragforce(AoA, speed)
         lift = self.__Liftforce(AoA, speed)
-        return np.stack((drag, lift))
+        return np.array([drag, lift])*density_reduction
 
-    def getMomentAboutCOM(self, AoA, speed):
+    def getMomentAboutCOM(self, AoA, position, speed):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
+        :param position: [np.array] The position vector in world coordinates
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
         """
-        return self.__MomentAboutCOM(AoA, speed)
+        z = abs(position[2])  # Vertical position of rocket
+        density_reduction = np.exp(-z/Forces.h)  # Account for decreasing air density
+        return self.__MomentAboutCOM(AoA, speed)*density_reduction
 
-    def getCOP(self, AoA, speed):
+    def getCOP(self, AoA):
         """
-        :param speed: [float] the air speed relative to rocket [m/s]
+        :param position: [np.array] The position vector in world coordinates
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The position of COP relative to nose tip [m]
         """
+        speed = 240  # TODO check if COP is speed dependent
         F = self.getAeroForces(AoA, speed)
         Fd = F[0]
         Fl = F[1]
@@ -151,7 +161,7 @@ class Rocket:
         rInitCOMx = self.__initCOM
         rCOMx = self.getCOMx(t)
         mInitMass = self.__motor.getMass(0)
-        mInitCOMx = self.__motor.getCOMx(0)
+        mInitCOMx = self.__motor.getCOM(0)[0]
         mInitInertia = self.__motor.getInertiaMatrix(0)
         mMass = self.__motor.getMass(t)
         mInertia = self.__motor.getInertiaMatrix(t)

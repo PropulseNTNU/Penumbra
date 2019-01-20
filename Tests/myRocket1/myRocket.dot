@@ -9,5 +9,5 @@ Number of fins:
 number_of_fins = 4
 
 Part placement:
-fin_placement = -150e-2
-payload_placement = -40e-2
+fin_placement = -140e-2
+payload_placement = -10e-2

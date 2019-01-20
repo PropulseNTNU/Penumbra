@@ -14,13 +14,13 @@ from lib.File_utilities import unwrap_openRocket
 import numpy as np
 import matplotlib.pyplot as plt
 
-sample_file = 'V9_CFD.txt'
-init_file = 'V9_data.dot'
-path = 'V9/'
+sample_file = 'V13_CFD.txt'
+init_file = 'V13_data.dot'
+path = 'V13/'
 rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
 BT = rocket.getMotor().getBurnTime()
 
-openRocket_file = 'V9/openRocketV9data.txt'
+openRocket_file = path + 'openRocketV13data.txt'
 OR_time, OR_mass, OR_propMass, OR_COM, OR_Ixx, OR_Ilong = unwrap_openRocket(openRocket_file)
 
 n = len(OR_time)

@@ -6,20 +6,26 @@ import numpy as np
 import Forces as Forces
 import Trajectory as Trajectory
 from Rocket2 import Rocket
+from Rocket1 import RocketSimple
 import matplotlib.pyplot as plt
 
 def test_trajectory_module():
     rad2deg = 180/np.pi
-    sample_file = 'V9_CFD.txt'
-    init_file = 'V9_data.dot'
-    path = 'V9/'
-    rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
-    initialInclination = 6.0/180.0*np.pi
-    launchRampLength = 2*rocket.getLength()
+    # Simple rocket (class 1) #
+    rocket_file = 'myRocket.dot'
+    path = 'myRocket1/'
+    rocket1 = RocketSimple.from_file(rocket_file, path)
+    #                         #
+    sample_file = 'V13_CFD.txt'
+    init_file = 'V13_data.dot'
+    path = 'V13/'
+    rocket2 = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
+    initialInclination = 1.0/180.0*np.pi
+    launchRampLength = 2.5*rocket1.getLength()
     timeStep = 0.005
-    simulationTime= 7
+    simulationTime= 15
     (t, position, euler, linearVelocity, angularVelocity, AoA, thrust, gravity, drag, lift) \
-    = Trajectory.calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime)
+    = Trajectory.calculateTrajectory(rocket1, initialInclination, launchRampLength, timeStep, simulationTime)
 
     plt.figure()
     ax1 = plt.subplot(311, xlabel='time [s]', ylabel='x [m]')
