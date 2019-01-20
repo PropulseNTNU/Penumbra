@@ -1,5 +1,5 @@
-# RocketSimulator
-An original rocket simulator developed by the simulation group at Propulse NTNU.
+# Penumbra
+An original rocket simulator developed by the simulation group at Propulse NTNU (TEAM 2019).
 
 Prerequisites to use simulator:
 	- Python packages:

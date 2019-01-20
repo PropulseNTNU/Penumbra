@@ -1,0 +1,8 @@
+
+IMPORTANT:
+Improve Inertia matrix for Class 1
+Check getAeroForces for Class 1 (improve if possible)
+
+AMBIGUITIES:
+implement inertia for Axially burning fuel
+implement routine for Moment-calculation for class 1

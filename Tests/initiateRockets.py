@@ -7,7 +7,6 @@ from Rocket1 import RocketSimple
 rocket_file = 'myRocket.dot'
 path = 'myRocket1/'
 myRocket1 = RocketSimple.from_file(rocket_file, path)
-print(myRocket1.getNose().getMass())
 
 # FOR ROCKET CLASS 2
 #sample_file = 'V13_CFD.txt'
