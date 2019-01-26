@@ -660,7 +660,7 @@ class RocketSimple:
         #Nose, Body and Fins Cn
         CNnose = self.__CNnose*np.sinc(AoA/np.pi) # np.sinc(x) = sin(pi*x)/(pi*x)
         CNfin = self.__CNfin*np.sinc(AoA/np.pi)
-        CNbody = self.__CNbody*np.sin(AoA)**2
+        CNbody = self.__CNbody*(np.sinc(AoA/np.pi)**2)*AoA
         CNrocket = CNnose + CNbody + CNfin
         COP0 = (CNnose*self.__Xcp_nose + CNbody*self.__Xcp_body + CNfin*self.__Xcp_fin)/CNrocket
         return np.array([COP0, 0, 0])
@@ -670,15 +670,15 @@ class RocketSimple:
         COP = self.getCOP(AoA)[0]
         return COM - COP
 
-    def getAeroForces(self, AoA, position, speed):
+    def getAeroForces(self, AoA, position, velocity):
         """
-        :param speed: [float] speed of air relative to rocket [m/s]
+        :param velocity: [np.array] velocity of rocket (with wind) relative to world [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
-        drag = Forces.SAMdrag(self, position, speed)
-        lift = Forces.SAMlift(self, position, speed, AoA)
+        drag = Forces.SAMdrag(self, position, velocity)
+        lift = Forces.SAMlift(self, position, velocity, AoA)
         return np.array([drag, lift])
 
     def getMomentAboutCOM(self, position, velocity, AoA):
@@ -697,7 +697,7 @@ class RocketSimple:
         #Nose, Body and Fins Cn
         CNnose = self.__CNnose*np.sinc(AoA/np.pi)
         CNfin = self.__CNfin*np.sinc(AoA/np.pi)
-        CNbody = self.__CNbody*np.sin(AoA)**2
+        CNbody = self.__CNbody*(np.sinc(AoA/np.pi)**2)*AoA
         # FINAL ROCKET COP
         CNrocket = CNnose + CNbody + CNfin
         return CNrocket

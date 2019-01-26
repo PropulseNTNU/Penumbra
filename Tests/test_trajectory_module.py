@@ -20,9 +20,9 @@ def test_trajectory_module():
     init_file = 'V13_data.dot'
     path = 'V13/'
     rocket2 = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
-    initialInclination = 1.0/180.0*np.pi
+    initialInclination = 10/180.0*np.pi
     launchRampLength = 2.5*rocket1.getLength()
-    timeStep = 0.005
+    timeStep = 0.003
     simulationTime= 15
     (t, position, euler, linearVelocity, angularVelocity, AoA, thrust, gravity, drag, lift) \
     = Trajectory.calculateTrajectory(rocket1, initialInclination, launchRampLength, timeStep, simulationTime)

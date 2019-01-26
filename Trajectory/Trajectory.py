@@ -79,21 +79,22 @@ def equationsMotion(rocket, x, t, launchRampLength, initialDirection):
     gravity = RotationInertial2Body @ np.array([0, 0, rocket.getMass(t)*g])
     # aerodynamic forces
     windVelocity = np.array([0, 0, 0])
-    airVelocity = linearVelocity - windVelocity
+    # Add wind to current rocket velocity to get total air velocity
+    airVelocity = linearVelocity + windVelocity
     airSpeed = np.linalg.norm(airVelocity)
     xAxisBody = RotationBody2Inertial[:,0]
     dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
     AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
     dirDragBody = RotationInertial2Body @ dirWindVelocity
-    aeroForces = rocket.getAeroForces(AoA, position, airSpeed)
-    drag = -aeroForces[0]*dirDragBody
+    #TODO Problem with drag and lift directions
     projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
-    lift = -aeroForces[1]*dirLiftBody
+    aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
+    drag = RotationInertial2Body @ aeroForces[0]
+    lift = -aeroForces[1]*dirLiftBody*0
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
-    print(lift)
     H = Kinematics.TransformationMatrix(rocket.getCOM(t))
     m = rocket.getMass(t)
     I = rocket.getInertiaMatrix(t)
