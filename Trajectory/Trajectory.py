@@ -116,7 +116,8 @@ def equationsMotion(rocket, x, t, launchRampLength, initialDirection):
     rhs = genForceBody - CBody @ genVelocity.T
     dGeneralizedVelocity = np.linalg.solve(IBody, rhs)
     dx = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
-    return (dx, AoA, thrust, gravity, drag, lift)
+    # AoA, thrust, gravity, drag, lift
+    return dx
 
 def unwrapState(x):
     position = x[:,0:3]
