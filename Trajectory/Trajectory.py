@@ -36,8 +36,8 @@ def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, tim
     N = math.ceil(simulationTime/timeStep)
     t = np.arange(0, simulationTime + timeStep, timeStep)
     x = np.zeros(shape=(N,len(x0)))
-    sol = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection))
-    #sol = spintegrate.RK45(equationsMotion, 0, x0, simulationTime, args=(rocket, launchRampLength, initialDirection))
+    #sol = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection))
+    sol = spintegrate.odeint(equationsMotion, x0, t, args=(rocket, launchRampLength, initialDirection))
     return t, sol
 
     """
@@ -83,18 +83,17 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     # aerodynamic forces
     windVelocity = np.array([0, 0, 0])
     # Add wind to current rocket velocity to get total air velocity
-    airVelocity = linearVelocity + windVelocity
+    airVelocity = dPosition + windVelocity
     airSpeed = np.linalg.norm(airVelocity)
     xAxisBody = RotationBody2Inertial[:,0]
     dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
     AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
-    dirDragBody = RotationInertial2Body @ (-dirWindVelocity)
-    #TODO Problem with drag and lift directions
+    dirDragBody = RotationInertial2Body @ (-dirWindVelocity.T)
     projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
     aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
-    drag = RotationInertial2Body @ aeroForces[0]
+    drag = RotationInertial2Body @ aeroForces[0].T
     lift = aeroForces[1]*dirLiftBody
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
