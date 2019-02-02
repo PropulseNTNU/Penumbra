@@ -6,22 +6,26 @@ sys.path.append('../Visual/')
 import numpy as np
 import Forces as Forces
 import Trajectory as Trajectory
-from Rocket2 import Rocket
 import matplotlib.pyplot as plt
 import visual
+
+from Rocket1 import RocketSimple
 
 rad2deg = 180/np.pi
 deg2rad = np.pi/180
 
 def run(int_inclination, ramp_length, time_step, sim_time):
-    sample_file = 'V13_CFD.txt'
-    init_file = 'V13_data.dot'
-    path = 'V13/'
-    rocket = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
-    initialInclination = int_inclination/180.0*np.pi
+    rocket_file = 'myRocket.dot'
+    path = 'myRocket1/'
+    rocket1 = RocketSimple.from_file(rocket_file, path)
+    int_inclination = 10/180.0*np.pi
+    ramp_length = 2.5*rocket1.getLength()
+    time_step = 0.003
+    sim_time = 15
+
 
     (t, position, euler, linearVelocity, angularVelocity, AoA, thrust, gravity, drag, lift) \
-    = Trajectory.calculateTrajectory(rocket, int_inclination, ramp_length, time_step, sim_time)
+    = Trajectory.calculateTrajectory(rocket1, int_inclination, ramp_length, time_step, sim_time)
 
     sample_rate = 1 / time_step
 
@@ -34,13 +38,10 @@ def run(int_inclination, ramp_length, time_step, sim_time):
         t += time_step
 
     for t in time_domain:
-        COM = COM + [rocket.getCOM(t)[0]]
+        COM = COM + [rocket1.getCOM(t)[0]]
     for i in range(len(AoA)):
-        print(np.linalg.norm(linearVelocity[i]))
-        COP = COP + [rocket.getCOP(AoA[i], np.linalg.norm(linearVelocity[i]))[0]]
-    print(COP)
-
-    print('Thrust',thrust, 'Gravity', gravity, 'Drag', drag, 'Lift', lift, sep='\n')
+        #COP = COP + [rocket1.getCOP(AoA[i], np.linalg.norm(linearVelocity[i]))[0]]
+        COP = COP + [0]
 
 
     visual.launch(sample_rate, position, euler, COM, COP, thrust, gravity, lift, drag)
