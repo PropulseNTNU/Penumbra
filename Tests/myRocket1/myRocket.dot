@@ -2,12 +2,12 @@ Parts:
 nose = myNose.dot
 body = myBody.dot
 fin = myFin.dot
-motor = ../Motors/CesaroniM1800.dot
+motor = ../Motors/CesaroniM1450.dot
 payload = myPayload.dot
 
 Number of fins:
 number_of_fins = 4
 
 Part placement:
-fin_placement = -140e-2
-payload_placement = -10e-2
+fin_placement = -1740e-3
+payload_placement = -200e-3
