@@ -6,8 +6,8 @@ import numpy as np
 import math
 import scipy.linalg as splinalg
 import scipy.integrate as spintegrate
-from scipy.constants import g
 import Kinematics
+import Forces
 
 epsilon = 1e-10
 
@@ -17,7 +17,7 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
     (x0, initialDirection) = initialState(rocket, initialInclination)
     t, x = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
-     # Calculate AoA during flight, transform velocity to world frame
+     # Calculate AoA during flight, transform velocity to world frame for plot
     AoA = np.zeros(len(t))
     velocity = np.zeros(shape=(len(t),3)) # in world frame
     for i in range(len(t)):
@@ -47,7 +47,6 @@ def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, tim
     t = np.arange(0, simulationTime + timeStep, timeStep)
     x = np.zeros(shape=(N,len(x0)))
     sol = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection))
-    #sol = spintegrate.odeint(equationsMotion, x0, t, args=(rocket, launchRampLength, initialDirection))
     return t, sol
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
@@ -68,7 +67,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     dQuaternion = Kinematics.quaternionGradient(quaternion) @ angularVelocity.T
     # forces in the body frame
     thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
-    gravity = RotationInertial2Body @ np.array([0, 0, rocket.getMass(t)*g])
+    gravity = RotationInertial2Body @ np.array([0, 0, rocket.getMass(t)*Forces.g])
     # aerodynamic forces
     windVelocity = np.array([0, 0, 0])
     # Add wind to current rocket velocity to get total air velocity

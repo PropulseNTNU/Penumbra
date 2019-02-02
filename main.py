@@ -38,16 +38,14 @@ init_file1 = 'myRocket.dot'
 # FOR ROCKET CLASS 1
 Rocket1 = RocketSimple.from_file(init_file1, path1)
 # Specify initial conditions
-initialInclination = 10/180.0*np.pi
+initialInclination = 16/180.0*np.pi
 launchRampLength = 2.0*Rocket1.getLength()
 timeStep = 0.006
-simulationTime= 30
+simulationTime= 20
 (t, position, euler, AoA, linearVelocity, angularVelocity) \
 = Trajectory.calculateTrajectory(Rocket1, initialInclination, launchRampLength, timeStep, simulationTime)
 
 # Calculate plot data (Forces etc.)
-n = len(t)
-Forces = np.zeros((n, 3)) # Total force in x, y and z direction
 
 # Visualize trajectory
 
@@ -93,7 +91,7 @@ ax3.set_title('roll')
 ax3.grid()
 plt.subplots_adjust(hspace=0.5)
 ax1 = plt.subplot(414, xlabel='time [s]', ylabel='AoA [deg]')
-ax1.plot(t, AoA*rad2deg, label='AoA', lw=2, c='k')
+ax1.plot(t[15:], AoA[15:]*rad2deg, label='AoA', lw=2, c='k')
 ax1.set_title('AoA')
 ax1.grid()
 

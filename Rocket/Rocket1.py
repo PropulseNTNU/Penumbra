@@ -297,7 +297,7 @@ class Fin:
         l1 = self.__rootChord
         l2 = self.__tipChord
         a = self.__angle
-        return np.array([-(cord/np.tan(a) + 3/4*(l2 - l1)), 0, 0])  # COM relative to top edge of fin
+        return np.array([-((cord/np.tan(a*np.pi/180) + (l1 + l2)/2)/2), 0, 0])  # COM relative to top edge of fin
 
     @staticmethod
     def from_file(file):
@@ -530,17 +530,17 @@ class RocketSimple:
         self.__massOfRocketStructure = np.array([part.getMass() for part in self.__rocketStructure])
         self.__massOfRocketStructure[3] = self.__N*self.__massOfRocketStructure[3]  # There are N fins
         print("\tCalculating rocket mass..")
-        self.__rocketMass = self.__massOfRocketStructure.sum()
+        self.__rocketMass = self.__massOfRocketStructure.sum() + 4
         self.__motorMass = self.__rocketMotor.getMass(0)
         # TOTAL MASS (add 2 kg for now to account for electronics/recovery etc.)
-        self.__mass = self.__rocketMass + self.__motorMass + 2
+        self.__mass = self.__rocketMass + self.__motorMass
 
         # COM
         print("\tCalculating rocket COM (relative to rocket origin)..")
         self.__noseCOM = nose.getCOM()[0] - nose.getLength()
         self.__bodyCOM = body.getCOM()[0] - nose.getLength()
         # Assuming placement of fin is position of bottom edge relative to body top
-        self.__finCOM = partsPlacement[0] - fin.getCOM()[0] - nose.getLength()
+        self.__finCOM = partsPlacement[0] + (fin.getRootChord() + fin.getCOM()[0]) - nose.getLength()
         # Assuming placement of motor is at bottom of rocket (motor bottom align with body bottom)
         self.__motorCOM = motor.getLength() + motor.getCOM(0)[0] - body.getLength() - nose.getLength()
         # Assuming placement of payload is its COM relative to body top
@@ -715,10 +715,12 @@ class RocketSimple:
         COM = self.getCOM(t)[0]
         COP = self.getCOP(AoA)[0]
         stability_margin = self.getStabilityMargin(AoA)/self.getBody().getDiameter()
-        MOI = self.getInertiaMatrix(t)*1000
+        MOI = self.getInertiaMatrix(t)
         Cd = self.getCd()
         Cn = self.getCn(AoA)
         partsCOM = np.append(self.getCOMofParts(), motorCOM)
+        partsMass = self.__massOfRocketStructure
+        partsMass = np.append(partsMass, self.__motorMass)
         partNames = ['Nose', 'Payload','Body', 'Fins', 'Motor']
         length = self.getLength()
         width = self.getWidth()
@@ -730,7 +732,7 @@ class RocketSimple:
         print(dots)
         print("Mass: %1.2f kg" % Mass)
         print("Moment of inertia (about rocket axes with COM as origin) [g*m^2]:")
-        print(np.array2string(MOI, precision=1))
+        print(np.array2string(MOI*1e3, precision=1))
         print("Length: %1.2f m" % length)
         print("Width: %1.2f m" % width)
         print("Number of fins: %d" % N)
@@ -738,7 +740,7 @@ class RocketSimple:
         print("Lift coeff: %1.3f" % Cn)
         print("COM of (x-coordinate): ")
         for i in range(len(partNames)):
-            print("\t%s: %1.2f m" % (partNames[i], partsCOM[i]))
+            print("\t%s: %1.2f m (%1.2f g)" % (partNames[i], partsCOM[i], partsMass[i]*1e3))
         print("COM (x-coordinate): %1.2f m" % COM)
         print("COP (x-coordinate): %1.2f m" % COP)
         print("Stability margin: %1.2f" % (stability_margin)) # In body calibers
