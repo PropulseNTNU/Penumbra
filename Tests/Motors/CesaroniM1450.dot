@@ -1,8 +1,8 @@
 name = CesaroniM1450
-length = 702e-3
-diameter = 98e-3
-propellant_mass = 4830.0e-3
-frame_mass = 3748.0e-3
+length = 772e-3
+diameter = 98.5e-3
+propellant_mass = 4968.0e-3
+frame_mass = 3610.0e-3
 total_impulse = 9955.0
 0.01 60
 0.06 524
