@@ -2,19 +2,17 @@
 Script for running one complete simulation
     - Initialize a rocket
     - Calculate trajectory
-    - Use state vector to re-calculate forces
     - Visualize trajectory
     - Plot results
 
 Version: WIP
-Last edit: 30.01.2019
+Last edit: 04.02.2019
 
 --Propulse NTNU--
 """
 
 # TODO
-# Initialize a rocket from folder
-# Make an user interface
+# Add visual part
 
 import sys
 sys.path.append('Rocket/')
@@ -37,15 +35,27 @@ init_file1 = 'myRocket.dot'
 # Initialize a rocket
 # FOR ROCKET CLASS 1
 Rocket1 = RocketSimple.from_file(init_file1, path1)
-# Specify initial conditions
-initialInclination = 16/180.0*np.pi
-launchRampLength = 2.0*Rocket1.getLength()
-timeStep = 0.006
-simulationTime= 20
-(t, position, euler, AoA, linearVelocity, angularVelocity) \
-= Trajectory.calculateTrajectory(Rocket1, initialInclination, launchRampLength, timeStep, simulationTime)
 
-# Calculate plot data (Forces etc.)
+# Specify initial conditions
+initialInclination = 4/180.0*np.pi
+launchRampLength = 2.0*Rocket1.getLength()
+timeStep = 0.05
+simulationTime= 30
+trajectory = Trajectory.calculateTrajectory(Rocket1, initialInclination, launchRampLength, 
+                                            timeStep, simulationTime)
+# Kinematics
+t = trajectory[0]
+position = trajectory[1]
+euler = trajectory[2]
+AoA = trajectory[3]
+linearVelocity = trajectory[4]
+angularVelocity = trajectory[5]
+
+#Forces (as len(t)x3 matrices, one row correspond to 1 instance in time )
+drag = trajectory[6]
+lift = trajectory[7]
+gravity = trajectory[8]
+thrust = trajectory[9]
 
 # Visualize trajectory
 
@@ -127,6 +137,33 @@ plt.subplots_adjust(hspace=0.5)
 ax3 = plt.subplot(313, xlabel='time [s]', ylabel='w_z [rad/s]')
 ax3.plot(t, angularVelocity[:,2], lw=2, c='g')
 ax3.set_title('w_z')
+ax3.grid()
+
+# Forces
+plt.figure()
+ax1 = plt.subplot(311, xlabel='time [s]', ylabel='[N]')
+ax1.plot(t, thrust[:,0], label='thrust', lw=2, c='r')
+ax1.plot(t, drag[:,0], label='drag', lw=2, c='b')
+ax1.plot(t, lift[:,0], label='lift', lw=2, c='g')
+ax1.plot(t, gravity[:,0], label='gravity', lw=2, c='k')
+ax1.set_title('Forces [x, y and z components]')
+ax1.legend(loc='upper right')
+ax1.grid()
+plt.subplots_adjust(hspace=0.5)
+ax2 = plt.subplot(312, xlabel='time [s]', ylabel='[N]')
+ax2.plot(t, thrust[:,1], label='thrust', lw=2, c='r')
+ax2.plot(t, drag[:,1], label='drag', lw=2, c='b')
+ax2.plot(t, lift[:,1], label='lift', lw=2, c='g')
+ax2.plot(t, gravity[:,1], label='gravity', lw=2, c='k')
+ax2.grid()
+ax2.legend(loc='upper right')
+plt.subplots_adjust(hspace=0.5)
+ax3 = plt.subplot(313, xlabel='time [s]', ylabel='[N]')
+ax3.plot(t, thrust[:,2], label='thrust', lw=2, c='r')
+ax3.plot(t, drag[:,2], label='drag', lw=2, c='b')
+ax3.plot(t, lift[:,2], label='lift', lw=2, c='g')
+ax3.plot(t, gravity[:,2], label='gravity', lw=2, c='k')
+ax3.legend(loc='upper right')
 ax3.grid()
 
 # Show plots
