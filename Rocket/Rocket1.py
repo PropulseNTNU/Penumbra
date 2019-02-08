@@ -68,7 +68,7 @@ class Nose:
             L = self.__length
             a = (R**2 + L**2)/(2*R) # Ogive parameter
             return 2*np.pi*((R-a)*np.arcsin(L/a) + L)
-    
+
     def getVolume(self):
         if self.__noseType == noseTypes[0]:  # Conic
             d = self.__thickness
@@ -214,7 +214,7 @@ class Body:
         R = self.__diameter/2
         L = self.__length
         return 2*np.pi*R*L
-    
+
     def getVolume(self):
         d = self.__thickness
         R2 = self.__diameter/2
@@ -283,7 +283,7 @@ class Fin:
         l2 = self.__tipChord
         cord = self.__semiChord
         return 1/2*(l1+l2)*cord
-    
+
     def getVolume(self):
         l1 = self.__rootChord
         l2 = self.__tipChord
@@ -560,7 +560,7 @@ class RocketSimple:
         # TODO Account for electronics/recovery etc.
         self.__rocketMass = self.__massOfRocketStructure.sum() + 4
         self.__motorMass = self.__rocketMotor.getMass(0)
-        # TOTAL MASS 
+        # TOTAL MASS
         self.__mass = self.__rocketMass + self.__motorMass
 
         # COM
@@ -627,7 +627,7 @@ class RocketSimple:
         # TOTAL LENGTH OF ROCKET
         self.__length = nose.getLength() + body.getLength() + (SC/np.tan(theta)-RC) + TC
         # MAXIMAL WIDTH OF ROCKET
-        self.__width = body.getDiameter() + 2*SC
+        self.__width = body.getDiameter()/2 + SC
         # DRAG COEFFICIENT (at some arbitrary speed)
         self.__Cd = 1
         print("Rocket initialized!\n")
@@ -652,10 +652,13 @@ class RocketSimple:
     # Rocket structure
     def getNumberOfFins(self):
         return self.__N
-    
+
     def getMass(self, t):
         self.__mass = self.__rocketMass + self.__rocketMotor.getMass(t)
         return self.__mass
+
+    def setMass(self, mass):
+        self.__rocketMass = mass
 
     def getInertiaMatrix(self, t):
         self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t)[0] - self.__rocketStructure[
@@ -668,7 +671,8 @@ class RocketSimple:
     def getLength(self):
         return self.__length
 
-    def getWidth(self):
+    def getTransversalExtension(self):
+        "The distance from center of body to fin tip"
         return self.__width
 
     def getCOM(self, t):
@@ -678,6 +682,9 @@ class RocketSimple:
         motorMass = self.getMotor().getMass(t)
         self.__COM = (self.__rocketStructureCOM*self.__rocketMass + self.__motorCOM*motorMass)/mass
         return np.array([self.__COM, 0, 0])
+
+    def setCOM(self, com):
+        self.__COM = com
 
     def getCOMofParts(self):
         return self.__COMofRocketStructure
@@ -753,7 +760,7 @@ class RocketSimple:
         partsMass = np.append(partsMass, self.__motorMass)
         partNames = ['Nose', 'Payload','Body', 'Fins', 'Motor']
         length = self.getLength()
-        width = self.getWidth()
+        max_extension = self.getTransversalExtension()
         N = self.__N  # Number of fins
         dots = 33*'-'
 
@@ -761,19 +768,19 @@ class RocketSimple:
         print("Rocket Specifications at time %1.1f" % t)
         print(dots)
         print("Mass: %1.2f kg" % Mass)
-        print("Moment of inertia (about rocket axes with COM as origin) [g*m^2]:")
-        print(np.array2string(MOI*1e3, precision=1))
-        print("Length: %1.2f m" % length)
-        print("Width: %1.2f m" % width)
+        print("Moment of inertia (about rocket axes with COM as origin) [kg*cm^2]:")
+        print(np.array2string(MOI*1e4, precision=1))
+        print("Length: %1.1f cm" % (length*1e2))
+        print("Transversal extension: %1.2f cm" % (max_extension*1e2))
         print("Number of fins: %d" % N)
-        print("Drag coeff: %1.3f" % Cd)
-        print("Lift coeff: %1.3f" % Cn)
+        print("Drag coeff: %1.2f" % Cd)
+        print("Lift coeff: %1.2f (at AoA=%1.1f deg)" % (Cn, AoA*180/np.pi))
         print("COM of (x-coordinate): ")
         for i in range(len(partNames)):
-            print("\t%s: %1.2f m (%1.2f g)" % (partNames[i], partsCOM[i], partsMass[i]*1e3))
-        print("COM (x-coordinate): %1.2f m" % COM)
-        print("COP (x-coordinate): %1.2f m" % COP)
-        print("Stability margin: %1.2f" % (stability_margin)) # In body calibers
+            print("\t%s: %1.1f cm (%1.2f kg)" % (partNames[i], partsCOM[i]*1e2, partsMass[i]))
+        print("COM (x-coordinate): %1.1f cm" % (COM*1e2))
+        print("COP (x-coordinate): %1.1f cm" % (COP*1e2))
+        print("Stability margin: %1.2f b.c" % (stability_margin)) # In body calibers
         print(dots)
 
     @staticmethod

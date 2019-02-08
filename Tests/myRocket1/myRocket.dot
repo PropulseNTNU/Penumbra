@@ -6,7 +6,7 @@ motor = ../Motors/CesaroniM1450.dot
 payload = myPayload.dot
 
 Number of fins:
-number_of_fins = 4
+number_of_fins = 3
 
 Part placement:
 fin_placement = -1740e-3

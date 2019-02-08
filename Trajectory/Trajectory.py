@@ -43,9 +43,8 @@ def initialState(rocket, initialInclination):
     return (x0, initialDirection)
 
 def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime):
-    N = math.ceil(simulationTime/timeStep)
     t = np.arange(0, simulationTime + timeStep, timeStep)
-    x = np.zeros(shape=(N,len(x0)))
+    x = np.zeros(shape=(len(t),len(x0)))
     sol, AoA, force = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection))
     return t, sol, AoA, force
 
@@ -95,7 +94,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     CBody = H.T @ splinalg.block_diag(S1, -S2) @ H
     # obtain generalized forces seen from origin of body frame
     totalForce = thrust + gravityBody + drag + lift
-    forceMatrix = np.array([drag, lift, gravityWorld, thrust]).T
+    forceMatrix = np.array([drag, lift, gravityBody, thrust]).T
     if stillAtLaunchRamp:
         totalForce = np.array([totalForce[0], 0, 0])
         totalMoment = np.array([0, 0, 0])
