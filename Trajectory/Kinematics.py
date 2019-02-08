@@ -16,7 +16,7 @@ def Ryzx(pitch, yaw, roll):
     return R
 
 def Rquaternion(q):
-    q = q/np.linalg.norm(q)
+    q = q/(np.linalg.norm(q))
     eta = q[0]
     eps = q[1:4]
     S = CrossProductMatrix(eps)

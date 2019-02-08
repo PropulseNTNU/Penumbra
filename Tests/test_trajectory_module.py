@@ -20,12 +20,13 @@ def test_trajectory_module():
     init_file = 'V13_data.dot'
     path = 'V13/'
     rocket2 = Rocket.from_file_with_AoAspeed(init_file, sample_file, path)
-    initialInclination = 10/180.0*np.pi
-    launchRampLength = 2.5*rocket1.getLength()
-    timeStep = 0.003
-    simulationTime= 15
-    (t, position, euler, linearVelocity, angularVelocity, AoA, thrust, gravity, drag, lift) \
-    = Trajectory.calculateTrajectory(rocket1, initialInclination, launchRampLength, timeStep, simulationTime)
+    initialInclination = 1/180.0*np.pi
+    launchRampLength = 2*rocket1.getLength()
+    timeStep = 0.002
+    simulationTime= 30
+    #AoA, thrust, gravity, drag, lift
+    (t, position, euler, linearVelocity, angularVelocity) = \
+    Trajectory.calculateTrajectory(rocket1, initialInclination, launchRampLength, timeStep, simulationTime)
 
     plt.figure()
     ax1 = plt.subplot(311, xlabel='time [s]', ylabel='x [m]')
@@ -50,6 +51,7 @@ def test_trajectory_module():
     ax1.grid()
     ax1.axis('equal')
 
+    """
     plt.figure()
     ax1 = plt.subplot(411, xlabel='time [s]', ylabel='pitch [deg]')
     ax1.plot(t, euler[:,0]*rad2deg, label='pitch', lw=2, c='r')
@@ -127,7 +129,7 @@ def test_trajectory_module():
     ax3.plot(t[0:-1], gravity[:,2], label='gravity', lw=2, c='k')
     ax3.set_title('Forces z')
     ax3.grid()
-
+    """
     plt.show()
 
 def main():
