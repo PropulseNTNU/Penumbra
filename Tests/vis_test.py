@@ -20,7 +20,7 @@ def run(int_inclination, ramp_length, time_step, sim_time):
     rocket1 = RocketSimple.from_file(rocket_file, path)
     int_inclination = 10/180.0*np.pi
     ramp_length = 2.5*rocket1.getLength()
-    time_step = 0.003
+    time_step = 0.005
     sim_time = 15
 
 
@@ -46,4 +46,4 @@ def run(int_inclination, ramp_length, time_step, sim_time):
 
     visual.launch(sample_rate, position, euler, COM, COP, thrust, gravity, lift, drag)
 
-run(6, 520, 0.05, 60)
+run(6, 520, 0.005, 60)
