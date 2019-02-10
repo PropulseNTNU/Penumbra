@@ -36,7 +36,7 @@ init_file1 = 'myRocket.dot'
 Rocket1 = RocketSimple.from_file(init_file1, path1)
 
 # Specify initial conditions
-initialInclination = 1/180.0*np.pi
+initialInclination = 10/180.0*np.pi
 launchRampLength = 2.0*Rocket1.getLength()
 timeStep = 0.03
 simulationTime= 25
