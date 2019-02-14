@@ -26,7 +26,6 @@ def Drag1(rocket, position, linearVelocityBody, AoA):
     :param position: [np.array] The position vector in world coordinates
     :param linearVelocity: [np.array] The current rocket velocity in body coord. (with wind)
     :return: [np.array] drag force in the world frame [N]
-
     """
     z = abs(position[2])  # Vertical position of rocket
     velocity = np.array([linearVelocityBody[0], 0, 0])  # component along body x-axis that contributes
@@ -56,54 +55,91 @@ def Drag1(rocket, position, linearVelocityBody, AoA):
         Cf = Cf/(1 + 0.15*M**2)**0.58
 
     k = 1/2*rho0*Awet*Cf*np.exp(-z/h)
-
+    #TODO Complete this function (Using updateCd_2 for now, probably better)
     return -k*speed*velocity
 
-def Drag2(rocket, position, linearVelocityBody, AoA):
+def updateCd_2(rocket, position, linearVelocityBody, AoA):
     """
     Reference: "Estimating the dynamic and aerodynamic paramters of
     passively controlled high power rockets for flight simulaton" by Simon B. .. Feb 2009
 
+    "The comparison shows a good agreement between experimental and modelled data
+    for vaules 0deg < AoA < 15deg, K=1" (page 12 in document)
+
+    This function evaluates the drag coefficient Cd at the given state and updates the rocket object.
+
     :param rocket: [rocket class] The rocket object
     :param position: [np.array] The position vector in world coordinates
     :param linearVelocity: [np.array] The current rocket velocity in body coord. (with wind)
-    :return: [float] Lift force in the body frame [N]
+    :param AoA: [float] the current angle of attack
     """
     z = abs(position[2])  # Vertical position of rocket
     velocity = np.array([linearVelocityBody[0], 0, 0])  # component along body x-axis that contributes
     speed = np.linalg.norm(velocity)
+    if speed < 0.5:
+        rocket.setCd(0)
+        return True
     M = speed/c  # Mach number
     Rcrit = 5e5
     # For body and nose
-    Lb = rocket.getBody().getLength() + rocket.getNose().getLength()
-    R = speed*Lb/nu  # Reynold's number (Kinematic viscosity)
+    Ln = rocket.getNose().getLength()
+    Lb = rocket.getBody().getLength()
+    Ltot = Lb + Ln
+    D = rocket.getBody().getDiameter()
+    R = speed*Ltot/nu  # Reynold's number (Kinematic viscosity)
     B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cfb = 0
     # Conditions for different R
-    if R <= Rcrit:
+    if 0 < R <= Rcrit:
         Cfb = 1.328/(R**0.5)
-    else:
+    elif R > Rcrit:
         Cfb = 0.074/(R**0.2) - B/R
-
+    # Body drag contrib. (assuming no boat tail) (eq 41)
+    Cd_fb = (1 + 60/(Ltot/D)**3 + (2.5e-3)*Lb/D)*(2.7*Ln/D + 4*Lb/D)*Cfb
+    # Base drag contrib. (due to boundary layer seperation, low pressure region)
+    if Cd_fb != 0:
+        Cd_b = 0.029/np.sqrt(Cd_fb)
+    else:
+        Cd_b = 0
     # For fins
-    Lf = rocket.getFin().getSemiChord()
-    R = R*Lf/Lb
+    Lsc = rocket.getFin().getSemiChord()
+    Lr = rocket.getFin().getRootChord()
+    Tf = rocket.getFin().getThickness()
+    N = rocket.getNumberOfFins()
+    Afe = rocket.getFin().getSurfaceArea()
+    Afp = Afe + 1/2*D*Lr
+    R = R*Lsc/Lb
     B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cff = 0
-    # Conditions for different R
-    if R <= Rcrit:
+    # Conditions for different Reynold's number
+    if 0 < R <= Rcrit:
         Cff = 1.328/(R**0.5)
-    else:
+    elif R > Rcrit:
         Cff = 0.074/(R**0.2) - B/R
+    # Drag contrib. (43)
+    Cd_f = 2*Cff*(1 + 2*Tf/Lsc)*4*N*Afp/(np.pi*D**2)
 
-    # Interference term (between body and fins)
-    D = rocket.getBody().getDiameter()
-    N = rocket.getNumberOfFins()
-    Cdint = 2*Cff*(1 + 2)
+    # Interference term (between body and fins) (44)
+    Cd_int = 2*Cff*(1 + 2*Tf/Lsc)*4*N*(1/2*D*Lr)/(np.pi*D**2)
 
-    Cf = Cfb + Cff
-    # TODO finish this
-    return Cf
+    # total zero AoA drag coefficient (eq 48)
+    CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
+
+    # AoA corrections (assuming AoA is below 10 deg)
+    # From body
+    delta = 0.9 # experimental values (see page 14 in document referenced above)
+    eta = 0.7
+    # Fin section ratio Rs (total fin span / Body diameter)
+    Rs = 2*np.sin(2*np.pi/N)*rocket.getTransversalExtension()/D
+    kfb = 0.8065*Rs**2 + 1.1553*Rs
+    kbf = 0.1935*Rs**2 + 0.8174*Rs + 1
+    Cd_bA = 2*delta*AoA**2 + 3.6*eta*(1.36*Ltot - 0.55*Ln)/(np.pi*D)*(AoA**3)
+    Cd_fA = (AoA**2)*4/(np.pi*D**2)*(1.2*Afp + 3.12*(kfb + kbf - 1)*Afe)
+
+    # FINAL CD
+    CD = CD_0 + Cd_bA + Cd_fA
+    # Update Cd of rcoket object
+    rocket.setCd(CD)
 
 def SAMdrag(rocket, position, linearVelocityWorld):
     """

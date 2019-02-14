@@ -303,6 +303,9 @@ class Fin:
     def getTopEdgeAngle(self):
         return self.__angle
 
+    def getThickness(self):
+        return self.__thickness
+
     def getMass(self):
         return self.__density*self.getVolume()
 
@@ -628,8 +631,8 @@ class RocketSimple:
         self.__length = nose.getLength() + body.getLength() + (SC/np.tan(theta)-RC) + TC
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
-        # DRAG COEFFICIENT (at some arbitrary speed)
-        self.__Cd = 1
+        # DRAG COEFFICIENT (at some arbitrary speed, 30 m/s)
+        Forces.updateCd_2(self, [0, 0, 0], [30, 0, 0], 5*np.pi/180)
         print("Rocket initialized!\n")
         self.printSpecifications(0, 5*np.pi/180) # Specs at AoA = 5 deg.
 
@@ -716,6 +719,7 @@ class RocketSimple:
 
         :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
+        Forces.updateCd_2(self, position, velocity, AoA)
         drag = Forces.SAMdrag(self, position, velocity)
         lift = Forces.SAMlift(self, position, velocity, AoA)
         return np.array([drag, lift])
