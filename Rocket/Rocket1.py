@@ -632,7 +632,7 @@ class RocketSimple:
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
         # DRAG COEFFICIENT (at some arbitrary speed, 30 m/s)
-        Forces.updateCd_2(self, [0, 0, 0], [30, 0, 0], 5*np.pi/180)
+        Forces.updateCd_2(self, [0, 0, 0], [30, 0, 0], 0)
         print("Rocket initialized!\n")
         self.printSpecifications(0, 5*np.pi/180) # Specs at AoA = 5 deg.
 
