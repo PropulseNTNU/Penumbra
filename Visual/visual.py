@@ -27,15 +27,34 @@ def rel_euler(pitch_1, yaw_1, roll_1, pitch_2, yaw_2, roll_2):
 
 # Rocket in world frame
 def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, drag):
+    print("Initializing...")
     for step in range(len(position)):
         position[step][2] = -position[step][2]
 
     force_scale = 0.01
     l = 2
     rad = 0.09
+
+    n = 1;
+    while sample_rate // n > 30:
+        n += 1
+    sample_rate = sample_rate // n
+
+    print("Adjusting resolution")
+
+    position = position[::n]
+    orientation = orientation[::n]
+    COM = COM[::n]
+    COP = COP[::n]
+    thrust = thrust[::n]
+    gravity = gravity[::n]
+    lift = lift[::n]
+    drag = drag[::n]
+
     steps = len(position)
 
     # Initialization of enviorment
+    print("Initializing render enviorment")
     render = vp.canvas(height=600, width=1200, background=vp.vector(0.8, 0.8, 0.8), forward=vp.vector(1, 0, 0), up=vp.vector(0, 0, 1))
     render.select()
     render.caption = "Loading..."
@@ -52,7 +71,7 @@ def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, 
     inv_box = vp.box(pos=vp.vector(l/2, 0, 0), size=vp.vector(l, 10e-10, 10e-10), visible=False)
 
     # Initialization of rocket
-    rocket = vp.compound([body, cone, a_fins, b_fins, inv_box], pos=vp.vector(0, 0, 1), axis=vp.vector(1, 0, 0), up=vp.vector(0, 0, 1), color=vp.vector(1,1,1), opacity=0.5)
+    rocket = vp.compound([body, cone, a_fins, b_fins, inv_box], pos=vp.vector(0, 0, 1), axis=vp.vector(1, 0, 0), up=vp.vector(0, 0, 1), color=vp.vector(1,1,1))
 
     COM_sphere = vp.sphere(radius = 0.04, color=vp.vector(0, 0, 0))
     COP_sphere = vp.sphere(radius = 0.04, color=vp.vector(0, 0, 0))
@@ -88,8 +107,9 @@ def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, 
     sqr_in1 = [[-b, b - 3*c],[b, b - 3*c],[b, -b],[-b, -b], [-b, b - 3*c]]
     sqr_in2 = [[-b, b],[b, b], [b, b - 2*c],[-b, b - 2*c], [-b, b]]
 
+    print("Placing references...")
     for step in range(2, steps):
-        if not step % 5:
+        if not step % 10:
             a = 4
             c = 0.3
             b = a - c
@@ -99,9 +119,13 @@ def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, 
             ref.rotate(angle=orientation[step][1], axis=ref.up)
             ref.rotate(angle=orientation[step][2], axis=ref.axis)
 
+    print("Beginning graphics loop")
     render.caption = "Running"
     render.visible = True
+    t = 0
     for step in range(steps):
+        t += 1/sample_rate
+        render.caption = "Simulated time %.2f" %  t
         x = position[step][0]
         y = position[step][1]
         z = position[step][2]
@@ -133,7 +157,6 @@ def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, 
         lift_ax_z = lift_mag
 
         drag_mag = np.linalg.norm(drag[step]) * force_scale
-        print(lift_mag)
         drag_ax_x = drag_mag
         drag_ax_y = 0
         drag_ax_z = 0
