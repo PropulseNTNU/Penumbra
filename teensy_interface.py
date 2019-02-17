@@ -52,8 +52,8 @@ def readControlSignal(ser, prefix='', size=0):
         try:
             data = ser.read(size).decode("utf-8").split("\n")
             for i in range(len(data)-1, 0, -1):
-                if data[i].startswith("c_s") and data[i].endswith("\r"):
-                    return float(data[i].replace("c_s", '').replace("\r", ''))
+                if data[i].startswith(prefix) and data[i].endswith("\r"):
+                    return float(data[i].replace(prefix, '').replace("\r", ''))
             print("Did not find the control signal")
 
         except AttributeError as error:

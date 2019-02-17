@@ -8,26 +8,29 @@ Last edit: 08.02.2019
 """
 
 import sys
-sys.path.append('simulator/Rocket/')
-sys.path.append('simulator/Forces/')
-sys.path.append('simulator/Trajectory/')
-sys.path.append('simulator/Visual')
+sys.path.append('Rocket/')
+sys.path.append('Forces/')
+sys.path.append('Trajectory/')
+sys.path.append('Visual')
 import numpy as np
 import scipy.linalg as splinalg
 from Rocket1 import RocketSimple
 import Trajectory
 import Kinematics
 import Forces
+import pen_sensor as ps
+import teensy_interface as ti
+import matplotlib.pyplot as plt
 
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
 # Initialize a rocket
 # FOR ROCKET CLASS 1
-path1 = 'rockets/'
-init_file1 = 'init_rocket.r'
+path1 = 'Tests/myRocket1/'
+init_file1 = 'myRocket.dot'
 Rocket = RocketSimple.from_file(init_file1, path1)
-Rocket.compressibleFlow(False)
+#Rocket.compressibleFlow(False)
 Cd = 0.5
 Across = np.pi*(Rocket.getBody().getDiameter()/2)**2
 
@@ -48,15 +51,22 @@ def RHS(x, t):
     return equationsMotion(x, t, Rocket, launchRampLength, initialState)
 
 def main():
+    sensor = ps.VirtualSensor()
+    ser = ti.initSerial("COM12", 9600, 1)
+
     Aold = Across # Inital area
     # Initialize with initial conditions.
     x = x0
     stateMatrix[0] = x
     steps = len(timelist)
 
+    Aabs = []
+    xs = []
+    dxs = []
+
     for i in range(1, steps):
         # Recieve data from serial port
-        Aab = 1
+        Aab = ti.readControlSignal(ser, prefix='c_s', size=300)
         Anew = Across + Aab
 
         # Update rocket with new data
@@ -75,7 +85,19 @@ def main():
         stateMatrix[i] = x  # Store new state
         Aold = Anew # Update old area for next iteration
 
-        # Transmit new state to serial port ('a' and 'h')
+        sensor.in_heigth(x[2])
+        sensor.in_acceleration(np.linalg.norm(dx[7:10]))
+
+        ti.sendHeightAndVelocity(ser, sensor.get_height(), sensor.get_acceleration())
+
+        Aabs = Aabs + [[Aab]]
+        xs = xs + [[x[2]]]
+        dxs = dxs + [[np.linalg.norm(dx[7:10])]]
+
+    plt.plot(t, Aabs[:len(t)])
+    plt.plot(t, xs[:len(t)])
+    plt.plot(t, dxs[:len(t)])
+    plt.show()
 
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
