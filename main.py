@@ -58,6 +58,43 @@ thrust = trajectory[9]
 
 # Visualize trajectory
 
+lookUpTable=[]
+hoydeN=0;
+hoyde=0;
+diff=0;
+for i in range(len(position[:,2])):
+   hoydeN=-int(np.floor(position[:,2][i]))
+   print("Hoyde: ", hoyde)
+   print("HoydeN: ", hoydeN)
+   if hoydeN < hoyde:
+       continue
+   if hoydeN>hoyde:
+       #var2=int(np.floor(position[:,2][i+1]))
+       diff=hoydeN-hoyde
+       print("Diff: ", diff)
+       if i==0:
+           a=(-linearVelocity[:,2][i])/diff
+           for j in range(diff):
+               lookUpTable.append(a*j)
+               hoyde+=1
+       else:
+           a=(-linearVelocity[:,2][i]-(-linearVelocity[:,2][i-1]))/diff
+           for j in range(diff):
+               lookUpTable.append(a*j+lookUpTable[hoyde-j-1])
+               hoyde+=1
+   lookUpTable.append(-linearVelocity[:,2][i])
+   hoyde+=1
+   
+print(lookUpTable)
+
+lookUpTable=[]
+for i in range(len(position[:,2])):
+    tempArr=[position[:,2][i],linearVelocity[:,2][i]]
+    lookUpTable.append(tempArr)
+
+print(lookUpTable)
+
+
 # Plot
 # Position
 plt.figure()

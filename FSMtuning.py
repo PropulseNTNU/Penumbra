@@ -70,6 +70,7 @@ def main():
         sumTime += dt
         itTime = ti.readFloatData(ser, prefix='itime', lines=100)
         print("Control signal: ", Aab )
+        print("Height: ", ti.readFloatData(ser, prefix="Height:", lines= 100) )
         if sumTime >= itTime:
             sumTime -= itTime
             Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
@@ -96,7 +97,7 @@ def main():
         sensor.in_heigth(x[2])
         sensor.in_acceleration(np.linalg.norm(dx[7:10]))
 
-        ti.sendHeightAndVelocity(ser, sensor.get_height(), sensor.get_acceleration())
+        ti.sendHeightAndVelocity(ser, -x[2], sensor.get_acceleration())
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
