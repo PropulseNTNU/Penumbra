@@ -16,9 +16,9 @@ def initSerial(port, baudrate, timeout):
     :param port: string; The serial port connected to the microcontroller.
 
     :param baudrate: int; The baud rate in bits per second. Needs to match the baud rate that the microcontroller uses.
-
+   
     :param timeout: Float; The maximum time we wait to read X number of bytes or a whole line.
-
+   
     :return: serial.Serial; returns the initialized serial object or None if it failed.
     """
     try:
@@ -33,41 +33,45 @@ def initSerial(port, baudrate, timeout):
         print(error)
         return None
 
-def readControlSignal(ser, prefix='', size=0):
+def readFloatData(ser, prefix='', lines = 1):
     """
-    Read the control signal. This function alows other data than the control signal to be on the serial connection.
-    Specify the prefix if you know there will be other data in addition to the control signal on the serial link.
+    Read data that has the float datatype. This function alows other data than the control signal to be on the serial connection.
+    Specify the prefix if you know there will be other data in addition to the data you want on the serial link.
 
     :param serial.Serial: The serial object already initialized.
 
-    :param str prefix: The control signal will have a prefix if other data is on the link.
-    Specify the prefix so we know what data to read.
-
-    :param int size: How many bytes we should read before. This number should be more than the
-    number of bytes  writen to the serial link in one loop by the air brakes program.
-
-    :return int: returns the control signal or None if it cant find one.
+    :param str prefix: The data needs to have a prefix if other data is on the link. 
+    Specify the prefix so we know what data to read.  
+    
+    :return: returns the control signal or None if it fails to find one.
     """
     if prefix != '':
         try:
-            data = ser.read(size).decode("utf-8").split("\n")
-            for i in range(len(data)-1, 0, -1):
-                if data[i].startswith(prefix) and data[i].endswith("\r"):
-                    return float(data[i].replace(prefix, '').replace("\r", ''))
-            print("Did not find the control signal")
-
+            lines_read = 0
+            while lines_read < lines:
+                lines_read += 1
+                data = ser.readline().decode("utf-8")
+                if prefix in data:
+                    try:
+                        retdata = float(data.replace(prefix, '').replace("\r", ''))
+                        return retdata
+                    except:
+                        pass
+            print("Read " + str(lines_read) + " lines without finding the control signal.")
+            return None
         except AttributeError as error:
             print("The serial connection is not initialized. Run the initSerial function first")
             print(error)
             return None
     else:
         try:
-            return int.from_bytes(ser.read(), byteorder="big")
-
+            return ser.readline().decode("utf-8")
+                    
         except AttributeError as error:
             print("The serial connection is not initialized. Run the initSerial function first")
             print(error)
             return None
+            
 
 def sendHeightAndVelocity(ser, height, velocity):
     try:
@@ -77,7 +81,7 @@ def sendHeightAndVelocity(ser, height, velocity):
         print("The write process timed out.")
         print(error)
         return False
-
-
+ 
+    
 def close(ser):
     ser.close()

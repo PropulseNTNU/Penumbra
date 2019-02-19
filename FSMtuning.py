@@ -52,7 +52,7 @@ def RHS(x, t):
 
 def main():
     sensor = ps.VirtualSensor()
-    ser = ti.initSerial("COM12", 9600, 1)
+    ser = ti.initSerial("/dev/ttyACM0", 9600, 1)
 
     Aold = Across # Inital area
     # Initialize with initial conditions.
@@ -64,11 +64,19 @@ def main():
     xs = []
     dxs = []
 
+    sumTime = 0
+    Aab = 0
     for i in range(1, steps):
-        # Recieve data from serial port
-        Aab = ti.readControlSignal(ser, prefix='c_s', size=300)
-        Anew = Across + Aab
+        sumTime += dt
+        itTime = ti.readFloatData(ser, prefix='itime', lines=100)
+        print("Control signal: ", Aab )
+        if sumTime >= itTime:
+            sumTime -= itTime
+            Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
 
+        # Recieve data from serial port
+        Anew = Across + Aab
+        
         # Update rocket with new data
         Rocket.setCd(Cd*Anew/Aold)
 
