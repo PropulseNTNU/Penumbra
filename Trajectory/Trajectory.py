@@ -113,6 +113,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
     # Get drag and lift for current state
+    Forces.updateCd_2(rocket, position, linearVelocity, AoA, rocket.getCompressibilityState())
     aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
     drag = RotationInertial2Body @ aeroForces[0].T
     lift = aeroForces[1]*dirLiftBody
