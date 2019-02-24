@@ -1,11 +1,11 @@
 Rocket to do list:
 
-Correct the geometry of the fins in the Barrowman Cn force coefficient calculation 
-Compressibility corrections 
-Skin friction drag 
-Pitch dampening 
+Correct the geometry of the fins in the Barrowman Cn force coefficient calculation
+Compressibility corrections
+Skin friction drag (DONE)
+Pitch dampening
 No roll dynamics? 
-Body pressure drag
-Fin pressure drag
-Base drag
+Body pressure drag (DONE)
+Fin pressure drag (DONE)
+Base drag (DONE)
 Parasitic drag

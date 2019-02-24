@@ -2,7 +2,7 @@
 Module containing models of aero forces acting on a rocket
 
 Version: WIP
-Last edit: 04.02.2019
+Last edit: 14.02.2019
 
 --Propulse NTNU--
 """
@@ -11,7 +11,7 @@ from scipy.constants import R, g, atmosphere
 
 T0 = 20 + 273 # Temperature at sea level [K]
 P0 = atmosphere # Air pressure at sea level [Pa]
-m = 29e-3  # Molecular mass of Air [kg]
+m = 29e-3  # Molar mass of Air [kg]
 rho0 = P0/(R*T0/m)  # Air density at sea level [kg/m^3]
 h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 nu = 1.511e-5  # Kinematic viscosity of air [m^2/s]
@@ -58,7 +58,7 @@ def Drag1(rocket, position, linearVelocityBody, AoA):
     #TODO Complete this function (Using updateCd_2 for now, probably better)
     return -k*speed*velocity
 
-def updateCd_2(rocket, position, linearVelocityBody, AoA):
+def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility=False):
     """
     Reference: "Estimating the dynamic and aerodynamic paramters of
     passively controlled high power rockets for flight simulaton" by Simon B. .. Feb 2009
@@ -72,11 +72,11 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA):
     :param position: [np.array] The position vector in world coordinates
     :param linearVelocity: [np.array] The current rocket velocity in body coord. (with wind)
     :param AoA: [float] the current angle of attack
+    :param enable_compressibility: [bool] Set True if Compressibility should be taken into account. Default value: False
     """
     z = abs(position[2])  # Vertical position of rocket
-    velocity = np.array([linearVelocityBody[0], 0, 0])  # component along body x-axis that contributes
-    speed = np.linalg.norm(velocity)
-    if speed < 0.5:
+    speed = np.linalg.norm(linearVelocityBody)
+    if speed < 0.01:
         rocket.setCd(0)
         return True
     M = speed/c  # Mach number
@@ -102,13 +102,13 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA):
     else:
         Cd_b = 0
     # For fins
-    Lsc = rocket.getFin().getSemiChord()
+    Lm = rocket.getFin().getMidChord()
     Lr = rocket.getFin().getRootChord()
     Tf = rocket.getFin().getThickness()
     N = rocket.getNumberOfFins()
     Afe = rocket.getFin().getSurfaceArea()
     Afp = Afe + 1/2*D*Lr
-    R = R*Lsc/Lb
+    R = R*Lm/Ltot
     B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cff = 0
     # Conditions for different Reynold's number
@@ -117,10 +117,10 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA):
     elif R > Rcrit:
         Cff = 0.074/(R**0.2) - B/R
     # Drag contrib. (43)
-    Cd_f = 2*Cff*(1 + 2*Tf/Lsc)*4*N*Afp/(np.pi*D**2)
+    Cd_f = 2*Cff*(1 + 2*Tf/Lm)*4*N*Afp/(np.pi*D**2)
 
     # Interference term (between body and fins) (44)
-    Cd_int = 2*Cff*(1 + 2*Tf/Lsc)*4*N*(1/2*D*Lr)/(np.pi*D**2)
+    Cd_int = 2*Cff*(1 + 2*Tf/Lm)*4*N*(1/2*D*Lr)/(np.pi*D**2)
 
     # total zero AoA drag coefficient (eq 48)
     CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
@@ -138,6 +138,15 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA):
 
     # FINAL CD
     CD = CD_0 + Cd_bA + Cd_fA
+
+    # Compressibility:
+    if enable_compressibility:
+        if M < 0.8:
+            CD = CD/np.sqrt(1 - M**2)
+        elif 0.8 <= M < 1.1:
+            CD = CD/np.sqrt(1 - (0.8)**2)
+        else:
+            CD = CD/np.sqrt(M**2 - 1)
     # Update Cd of rcoket object
     rocket.setCd(CD)
 
