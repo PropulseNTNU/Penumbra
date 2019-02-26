@@ -87,8 +87,12 @@ def main():
         print("Teensy a: ", teenyA )
 
         #print what the teensy read
-        #est_vel = ti.readFloatData(ser, prefix='est_vel', lines=100)
-        #print("Teensy est_vel: ", est_vel)
+        est_vel = ti.readFloatData(ser, prefix='est_v', lines=100)
+        print("Teensy estimated velocity: ", est_vel)
+
+        #print what the teensy read
+        est_height = ti.readFloatData(ser, prefix='est_h', lines=100)
+        print("Teensy estimated height: ", est_height)
 
 
         #print what the teensy read
