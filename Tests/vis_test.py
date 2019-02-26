@@ -42,4 +42,4 @@ def run(int_inclination, ramp_length, time_step, sim_time):
 
     visual.launch(sample_rate, position, euler, COM, COP, thrust, gravity, lift, drag)
 
-run(10/180.0*np.pi, 520, 0.005, 45)
+run(10/180.0*np.pi, 520, 0.005, 48)
