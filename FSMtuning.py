@@ -95,9 +95,10 @@ def main():
         Aold = Anew # Update old area for next iteration
 
         sensor.in_heigth(x[2])
+
         sensor.in_acceleration(np.linalg.norm(dx[7:10]))
 
-        ti.sendHeightAndVelocity(ser, -x[2], sensor.get_acceleration())
+        ti.sendHeightAndAcceleration(ser, -x[2], np.linalg.norm(dx[7:10]))
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]

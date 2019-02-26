@@ -73,11 +73,13 @@ def readFloatData(ser, prefix='', lines = 1):
             return None
             
 
-def sendHeightAndVelocity(ser, height, velocity):
+def sendHeightAndAcceleration(ser, height, acceleration):
     try:
-        ser.write((("h"+ str(height) + "v" + str(velocity))).encode("utf-8"))
+        string = ("h"+ str(round(height,2)) + "a" + str(round(acceleration, 2))).encode("utf-8")
+        ser.write(string)
+        print("The printed string sent to teensy: ", string)
         return True
-    except serial.SerialTimeoutException  as error:
+    except serial.SerialTimeoutException as error:
         print("The write process timed out.")
         print(error)
         return False
