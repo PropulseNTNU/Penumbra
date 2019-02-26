@@ -72,11 +72,51 @@ def readFloatData(ser, prefix='', lines = 1):
             print("The serial connection is not initialized. Run the initSerial function first")
             print(error)
             return None
+
+def readData(ser, prefix='', lines = 1):
+    """
+    Read data that has the float datatype. This function alows other data than the control signal to be on the serial connection.
+    Specify the prefix if you know there will be other data in addition to the data you want on the serial link.
+
+    :param serial.Serial: The serial object already initialized.
+
+    :param str prefix: The data needs to have a prefix if other data is on the link. 
+    Specify the prefix so we know what data to read.  
+    
+    :return: returns the control signal or None if it fails to find one.
+    """
+    if prefix != '':
+        try:
+            print("Trying to read: ", prefix)
+            lines_read = 0
+            while lines_read < lines:
+                lines_read += 1
+                data = ser.readline().decode("utf-8")
+                if prefix in data:
+                    try:
+                        retdata = data
+                        return retdata
+                    except:
+                        pass
+            print("Read " + str(lines_read) + " lines without finding the control signal.")
+            return None
+        except AttributeError as error:
+            print("The serial connection is not initialized. Run the initSerial function first")
+            print(error)
+            return None
+    else:
+        try:
+            return ser.readline().decode("utf-8")
+                    
+        except AttributeError as error:
+            print("The serial connection is not initialized. Run the initSerial function first")
+            print(error)
+            return None
             
 
 def sendHeightAndAcceleration(ser, height, acceleration):
     try:
-        string = ("h"+ str(round(height,2)) + "a" + str(round(acceleration, 2)) +"b").encode('utf-8')
+        string = ("< Data,"+ str(round(height,2)) + "," + str(round(acceleration, 2)) +">").encode('utf-8')
         ser.write(string)
         print("The printed string sent to teensy: ", string)
         return True

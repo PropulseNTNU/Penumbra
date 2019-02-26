@@ -79,12 +79,22 @@ def main():
 
         
         #print what the teensy read
-        teenyH = ti.readFloatData(ser, prefix='h', lines=100)
+        teenyH = ti.readFloatData(ser, prefix='t_h', lines=100)
         print("Teensy h: ", teenyH )
 
          #print what the teensy read
-        teenyA = ti.readFloatData(ser, prefix='a', lines=100)
+        teenyA = ti.readFloatData(ser, prefix='t_a', lines=100)
         print("Teensy a: ", teenyA )
+
+        #print what the teensy read
+        #est_vel = ti.readFloatData(ser, prefix='est_vel', lines=100)
+        #print("Teensy est_vel: ", est_vel)
+
+
+        #print what the teensy read
+        #byteArr = ti.readData(ser, prefix='bytes', lines=100)
+        #print("Byte arr: ", byteArr)
+
 
         # Recieve data from serial port
         Anew = Across + Aab
