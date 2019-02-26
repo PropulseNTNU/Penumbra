@@ -21,6 +21,7 @@ import Forces
 import pen_sensor as ps
 import teensy_interface as ti
 import matplotlib.pyplot as plt
+import time
 
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
@@ -52,7 +53,7 @@ def RHS(x, t):
 
 def main():
     sensor = ps.VirtualSensor()
-    ser = ti.initSerial("/dev/ttyACM0", 9600, 1)
+    ser = ti.initSerial("/dev/ttyACM0", 9600, 1)#"/dev/ttyACM0"
 
     Aold = Across # Inital area
     # Initialize with initial conditions.
@@ -66,14 +67,21 @@ def main():
 
     sumTime = 0
     Aab = 0
+    sumTime = 0
     for i in range(1, steps):
+
+        start = time.time()
         sumTime += dt
         itTime = ti.readFloatData(ser, prefix='itime', lines=100)
         print("Control signal: ", Aab )
-        print("Height: ", ti.readFloatData(ser, prefix="Height:", lines= 100) )
         if sumTime >= itTime:
             sumTime -= itTime
             Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
+
+        
+        #print what the teensy read
+        teenyH = ti.readFloatData(ser, prefix='res', lines=100)
+        print("Teensy h: ", teenyH )
 
         # Recieve data from serial port
         Anew = Across + Aab
@@ -103,7 +111,8 @@ def main():
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(dx[7:10])]]
-
+        sumTime += time.time() - start;
+    print("Average iteration time: ", sumTime/steps)
     plt.plot(t, Aabs[:len(t)])
     plt.plot(t, xs[:len(t)])
     plt.plot(t, dxs[:len(t)])
