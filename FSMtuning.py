@@ -67,21 +67,24 @@ def main():
 
     sumTime = 0
     Aab = 0
-    sumTime = 0
+    
     for i in range(1, steps):
-
-        start = time.time()
         sumTime += dt
         itTime = ti.readFloatData(ser, prefix='itime', lines=100)
-        print("Control signal: ", Aab )
+        print("Iteration time teensy: ", itTime)
         if sumTime >= itTime:
             sumTime -= itTime
             Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
+            print("Control signal: ", Aab )
 
         
         #print what the teensy read
-        teenyH = ti.readFloatData(ser, prefix='res', lines=100)
+        teenyH = ti.readFloatData(ser, prefix='h', lines=100)
         print("Teensy h: ", teenyH )
+
+         #print what the teensy read
+        teenyA = ti.readFloatData(ser, prefix='a', lines=100)
+        print("Teensy a: ", teenyA )
 
         # Recieve data from serial port
         Anew = Across + Aab
@@ -111,7 +114,6 @@ def main():
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(dx[7:10])]]
-        sumTime += time.time() - start;
     print("Average iteration time: ", sumTime/steps)
     plt.plot(t, Aabs[:len(t)])
     plt.plot(t, xs[:len(t)])

@@ -47,6 +47,7 @@ def readFloatData(ser, prefix='', lines = 1):
     """
     if prefix != '':
         try:
+            print("Trying to read: ", prefix)
             lines_read = 0
             while lines_read < lines:
                 lines_read += 1
@@ -75,7 +76,7 @@ def readFloatData(ser, prefix='', lines = 1):
 
 def sendHeightAndAcceleration(ser, height, acceleration):
     try:
-        string = ("h"+ str(round(height,2)) + "a" + str(round(acceleration, 2))).encode("utf-8")
+        string = ("h"+ str(round(height,2)) + "a" + str(round(acceleration, 2)) +"b").encode('utf-8')
         ser.write(string)
         print("The printed string sent to teensy: ", string)
         return True
