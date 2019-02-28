@@ -22,6 +22,7 @@ import pen_sensor as ps
 import teensy_interface as ti
 import matplotlib.pyplot as plt
 import time
+import FSMplotting as FSMplot
 
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
@@ -51,6 +52,14 @@ stateMatrix = np.zeros((len(timelist), len(x0)))
 def RHS(x, t):
     return equationsMotion(x, t, Rocket, launchRampLength, initialState)
 
+def plotData(teensyData, timeData, sumTime, ser):
+    for key, val in teensyData.items():
+        data = ti.readFloatData(ser, prefix=key, lines=100)
+        val[1].append(data)
+    timeData.append(sumTime)
+    FSMplot.plotData(teensyData, timeData)
+
+
 def main():
     sensor = ps.VirtualSensor()
     ser = ti.initSerial("/dev/ttyACM0", 9600, 1)#"/dev/ttyACM0"
@@ -67,8 +76,21 @@ def main():
 
     sumTime = 0
     Aab = 0
+
+    ## Data from teensy
+    teensyData = {
+        "t_h": ("height", []),
+        "t_a": ("acceleration", []),
+        "est_v": ("estimatedVelocity", []),
+        "est_h": ("estimatedHeight", []),
+        "c_s": ("Controll signal", [])
+
+        }
+    #for plotting
+    timeData = []
     
     for i in range(1, steps):
+        ser.flushInput()
         sumTime += dt
         itTime = ti.readFloatData(ser, prefix='itime', lines=100)
         print("Iteration time teensy: ", itTime)
@@ -77,28 +99,7 @@ def main():
             Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
             print("Control signal: ", Aab )
 
-        
-        #print what the teensy read
-        teenyH = ti.readFloatData(ser, prefix='t_h', lines=100)
-        print("Teensy h: ", teenyH )
-
-         #print what the teensy read
-        teenyA = ti.readFloatData(ser, prefix='t_a', lines=100)
-        print("Teensy a: ", teenyA )
-
-        #print what the teensy read
-        est_vel = ti.readFloatData(ser, prefix='est_v', lines=100)
-        print("Teensy estimated velocity: ", est_vel)
-
-        #print what the teensy read
-        est_height = ti.readFloatData(ser, prefix='est_h', lines=100)
-        print("Teensy estimated height: ", est_height)
-
-
-        #print what the teensy read
-        #byteArr = ti.readData(ser, prefix='bytes', lines=100)
-        #print("Byte arr: ", byteArr)
-
+        plotData(teensyData, timeData, sumTime, ser)
 
         # Recieve data from serial port
         Anew = Across + Aab
@@ -128,11 +129,12 @@ def main():
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(dx[7:10])]]
-    print("Average iteration time: ", sumTime/steps)
-    plt.plot(t, Aabs[:len(t)])
-    plt.plot(t, xs[:len(t)])
-    plt.plot(t, dxs[:len(t)])
     plt.show()
+    
+    #plt.plot(t, Aabs[:len(t)])
+    #plt.plot(t, xs[:len(t)])
+    #plt.plot(t, dxs[:len(t)])
+    #plt.show()
 
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection):

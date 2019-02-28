@@ -43,7 +43,7 @@ def readFloatData(ser, prefix='', lines = 1):
     :param str prefix: The data needs to have a prefix if other data is on the link. 
     Specify the prefix so we know what data to read.  
     
-    :return: returns the control signal or None if it fails to find one.
+    :return: returns ta float or None if it fails to find one.
     """
     if prefix != '':
         try:
@@ -58,7 +58,7 @@ def readFloatData(ser, prefix='', lines = 1):
                         return retdata
                     except:
                         pass
-            print("Read " + str(lines_read) + " lines without finding the control signal.")
+            print("Read " + str(lines_read) + " lines without finding the data prefix.")
             return None
         except AttributeError as error:
             print("The serial connection is not initialized. Run the initSerial function first")
@@ -83,7 +83,7 @@ def readData(ser, prefix='', lines = 1):
     :param str prefix: The data needs to have a prefix if other data is on the link. 
     Specify the prefix so we know what data to read.  
     
-    :return: returns the control signal or None if it fails to find one.
+    :return: returns data or None if it fails to find one.
     """
     if prefix != '':
         try:
@@ -98,7 +98,7 @@ def readData(ser, prefix='', lines = 1):
                         return retdata
                     except:
                         pass
-            print("Read " + str(lines_read) + " lines without finding the control signal.")
+            print("Read " + str(lines_read) + " lines without finding the data prefix.")
             return None
         except AttributeError as error:
             print("The serial connection is not initialized. Run the initSerial function first")
