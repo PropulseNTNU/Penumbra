@@ -29,22 +29,26 @@ y = np.sin(x)
 # You probably won't need this if you're embedding things in a tkinter plot...
 plt.ion()
 
-fig, axes = plt.subplots(nrows=5)
+fig, axes = plt.subplots(nrows=3, ncols=2)
+axes = axes.flatten()
 graphs = []
 for ax in axes:
     graphs.append(ax.plot(x, y, 'r-')[0])
 
 fig.canvas.draw()
 
-a = []
-b = []
-for phase in np.linspace(0, 10*np.pi, 500)
-    a
+a = [0]
+b = [1]
+for phase in np.linspace(0, 10*np.pi, 500):
+    i = 0
+    a.append(0)
+    b.append(float(b[-1] + 0.03))
     for graph in graphs:
-        print(np.sin(x + phase))
-        graph.set_ydata(np.sin(x + phase))
+        graph.set_data(b, a)
         axes[i].draw_artist(axes[i].patch)
         axes[i].draw_artist(graph)
+        axes[i].set_xlim(0, b[-1] + 5) 
+        axes[i].set_ylim(min(a)-5, max(a)+5)
         i += 1
-    fig.canvas.draw_idle()
+    fig.canvas.blit(ax.bbox)
     fig.canvas.flush_events()
