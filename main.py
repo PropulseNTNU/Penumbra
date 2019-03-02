@@ -87,12 +87,6 @@ for i in range(len(position[:,2])):
    
 print(lookUpTable)
 
-lookUpTable=[]
-for i in range(len(position[:,2])):
-    tempArr=[position[:,2][i],linearVelocity[:,2][i]]
-    lookUpTable.append(tempArr)
-
-print(lookUpTable)
 
 
 # Plot

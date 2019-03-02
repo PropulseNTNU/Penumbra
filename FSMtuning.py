@@ -57,12 +57,11 @@ def plotData(teensyData, timeData, sumTime, ser):
         data = ti.readFloatData(ser, prefix=key, lines=100)
         val[1].append(data)
     timeData.append(sumTime)
-    FSMplot.plotData(teensyData, timeData)
 
 
 def main():
     sensor = ps.VirtualSensor()
-    ser = ti.initSerial("/dev/ttyACM0", 9600, 1)#"/dev/ttyACM0"
+    ser = ti.initSerial("/dev/ttyACM1", 9600, 1)#"/dev/ttyACM0"
 
     Aold = Across # Inital area
     # Initialize with initial conditions.
@@ -77,17 +76,16 @@ def main():
     sumTime = 0
     Aab = 0
 
-    ## Data from teensy
+    ## Data from teensy for plotting
     teensyData = {
-        "t_h": ("height", []),
-        "t_a": ("acceleration", []),
-        "est_v": ("estimatedVelocity", []),
-        "est_h": ("estimatedHeight", []),
+        "t_h": ("Height(m)", []),
+        "t_a": ("Acceleration", []),
+        "est_v": ("Estimated velocity(m/s)", []),
+        "est_h": ("Estimated height(m)", []),
         "c_s": ("Controll signal", [])
-
         }
-    #for plotting
     timeData = []
+    
     
     for i in range(1, steps):
         ser.flushInput()
@@ -129,12 +127,8 @@ def main():
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(dx[7:10])]]
+    FSMplot.plotData(teensyData, timeData)
     plt.show()
-    
-    #plt.plot(t, Aabs[:len(t)])
-    #plt.plot(t, xs[:len(t)])
-    #plt.plot(t, dxs[:len(t)])
-    #plt.show()
 
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
