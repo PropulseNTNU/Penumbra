@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("MacOSX")
 
 fig = plt.gcf()
 fig.set_size_inches((12, 10))
@@ -12,7 +14,7 @@ def plotData(teensyData, timeData):
     rows = np.ceil(len(teensyData) / 2)
     for key, val in teensyData.items():
         plt.subplot(rows, 2, i)
-        plt.plot(timeData[-2:], val[1][-2:], 'black')
+        plt.plot(timeData, val[1], 'black')
         plt.title(val[0])
         plt.xlabel("Time(s)")
         i += 1

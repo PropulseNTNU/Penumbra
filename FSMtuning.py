@@ -57,12 +57,12 @@ def plotData(teensyData, timeData, sumTime, ser):
         data = ti.readFloatData(ser, prefix=key, lines=100)
         val[1].append(data)
     timeData.append(sumTime)
-    FSMplot.plotData(teensyData, timeData)
+
 
 
 def main():
     sensor = ps.VirtualSensor()
-    ser = ti.initSerial("/dev/ttyACM0", 9600, 1)#"/dev/ttyACM0"
+    ser = ti.initSerial("/dev/cu.usbmodem4739891", 9600, 1)#"/dev/ttyACM0"     /dev/cu.usbmodem4739891
 
     Aold = Across # Inital area
     # Initialize with initial conditions.
@@ -88,7 +88,8 @@ def main():
         }
     #for plotting
     timeData = []
-    
+    linearVelocity=[]
+    position=[]
     for i in range(1, steps):
         ser.flushInput()
         sumTime += dt
@@ -103,7 +104,7 @@ def main():
 
         # Recieve data from serial port
         Anew = Across + Aab
-        
+
         # Update rocket with new data
         Rocket.setCd(Cd*Anew/Aold)
 
@@ -119,22 +120,55 @@ def main():
         x = x + dt*dx
         stateMatrix[i] = x  # Store new state
         Aold = Anew # Update old area for next iteration
-
+        linearVelocity.append(x[7])
+        position.append(x[2])
         sensor.in_heigth(x[2])
 
         sensor.in_acceleration(np.linalg.norm(dx[7:10]))
 
-        ti.sendHeightAndAcceleration(ser, -x[2], np.linalg.norm(dx[7:10]))
+        ti.sendHeightAndAcceleration(ser, -x[2], dx[7])
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(dx[7:10])]]
+    FSMplot.plotData(teensyData, timeData)
     plt.show()
-    
+
     #plt.plot(t, Aabs[:len(t)])
     #plt.plot(t, xs[:len(t)])
     #plt.plot(t, dxs[:len(t)])
     #plt.show()
+    lookUpTable=[]
+    hoydeN=0;
+    hoyde=0;
+    diff=0;
+    print(linearVelocity)
+    print(position)
+    for i in range(len(position)):
+       hoydeN=-int(np.floor(position[i]))
+       print("Hoyde: ", hoyde)
+       print("HoydeN: ", hoydeN)
+       if hoydeN < hoyde:
+           print("continue")
+           continue
+       if hoydeN>hoyde:
+           #var2=int(np.floor(position[:,2][i+1]))
+           diff=hoydeN-hoyde
+           print("Diff: ", diff)
+           if i==0:
+               a=(linearVelocity[i])/diff
+               for j in range(diff):
+                   lookUpTable.append(a*j)
+                   hoyde+=1
+           else:
+               a=(linearVelocity[i]-(linearVelocity[i-1]))/diff
+               for j in range(diff):
+                   lookUpTable.append(a*j+lookUpTable[hoyde-j-1])
+                   hoyde+=1
+       lookUpTable.append(linearVelocity[i])
+       hoyde+=1
+    print(lookUpTable)
+
 
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
