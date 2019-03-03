@@ -126,13 +126,17 @@ def main():
         position.append(x[2])
         sensor.in_heigth(x[2])
 
-        sensor.in_acceleration(np.linalg.norm(dx[7:10]))
+        # Acceleration
+        quaternion = x[3:7]
+        Rbody2Inertial = Kinematics.Rquaternion(quaternion)
+        accWorld = Rbody2Inertial @ dx[7:10].T  
+        sensor.in_acceleration(np.linalg.norm(accWorld))
 
-        ti.sendHeightAndAcceleration(ser, -x[2], dx[7])
+        ti.sendHeightAndAcceleration(ser, -x[2], -accWorld[9])
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
-        dxs = dxs + [[np.linalg.norm(dx[7:10])]]
+        dxs = dxs + [[np.linalg.norm(accWorld)]]
     
     plt.show()
     plt.pause(30)
