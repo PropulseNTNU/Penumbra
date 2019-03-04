@@ -114,9 +114,9 @@ def readData(ser, prefix='', lines = 1):
             return None
             
 
-def sendHeightAndAcceleration(ser, height, acceleration):
+def sendHeightAndAcceleration(ser, height, acceleration, iterationTime):
     try:
-        string = ("<Data,"+ str(round(height,2)) + "," + str(round(acceleration, 2)) +">").encode('utf-8')
+        string = ("<"+ str(round(iterationTime,3))+ ","+ str(round(height,2)) + "," + str(round(acceleration, 2)) +">").encode('utf-8')
         ser.write(string)
         print("The printed string sent to teensy: ", string)
         return True

@@ -32,6 +32,8 @@ def plotData(teensyData, timeData):
         axes[i].draw_artist(graph)
         axes[i].set_xlim(0, timeData[-1] + 2) 
         axes[i].set_ylim(min(data)-50, max(data)+50)
+        if val[0] =="iter":
+            axes[i].set_ylim(min(data)-0.001, max(data) + 0.001)
         if val[0] =="c_s":
             axes[i].set_ylim(min(data)-0.001, max(data) + 0.001)
     fig.canvas.blit(axes[0].bbox)

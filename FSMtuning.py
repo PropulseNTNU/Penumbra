@@ -58,6 +58,7 @@ def plotData(teensyData, timeData, sumTime, ser):
         val[1].append(data)
     timeData.append(sumTime)
     FSMplot.plotData(teensyData, timeData)
+    
 
 def main():
     sensor = ps.VirtualSensor()
@@ -82,8 +83,8 @@ def main():
         "t_a": ("Acceleration[m/s^2]", []),
         "est_v": ("Estimated velocity[m/s]", []),
         "est_h": ("Estimated height[m]", []),
-        "c_s": ("Airbrakes area[m^2]", [])
-
+        "c_s": ("Airbrakes area[m^2]", []),
+        "iter": ("Iteration time Penumbra[s]", [])
         }
     #for plotting and writing 
     timeData = []
@@ -92,17 +93,22 @@ def main():
 
     FSMplot.init(teensyData, cols=2)
 
+    
+    iterationTime = 0
+    simulatedTime = 0
+
     for i in range(1, steps):
+        start = time.time()
         ser.flushInput()
-        sumTime += dt
+        simulatedTime += dt
+
         itTime = ti.readFloatData(ser, prefix='itime', lines=100)
         print("Iteration time teensy: ", itTime)
-        if sumTime >= itTime:
-            sumTime -= itTime
-            Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
-            print("Control signal: ", Aab )
 
-        plotData(teensyData, timeData, sumTime, ser)
+        Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
+        print("Control signal: ", Aab )
+
+        plotData(teensyData, timeData, simulatedTime, ser)
 
         # Recieve data from serial port
         Anew = Across + Aab
@@ -128,14 +134,15 @@ def main():
 
         sensor.in_acceleration(np.linalg.norm(dx[7:10]))
 
-        ti.sendHeightAndAcceleration(ser, -x[2], dx[7])
+        ti.sendHeightAndAcceleration(ser, -x[2], dx[7], iterationTime/i)
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(dx[7:10])]]
-    
+        iterationTime += time.time() - start
+    print("Average iteration time: ", iterationTime/steps)
     plt.show()
-    plt.pause(30)
+    plt.pause(60)
     
 
     lookUpTable=[]
