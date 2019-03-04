@@ -58,7 +58,6 @@ def plotData(teensyData, timeData, sumTime, ser):
         val[1].append(data)
     timeData.append(sumTime)
     FSMplot.plotData(teensyData, timeData)
-    
 
 def main():
     sensor = ps.VirtualSensor()
@@ -74,7 +73,6 @@ def main():
     xs = []
     dxs = []
 
-    sumTime = 0
     Aab = 0
 
     ## Data from teensy
@@ -93,7 +91,6 @@ def main():
 
     FSMplot.init(teensyData, cols=2)
 
-    
     iterationTime = 0
     simulatedTime = 0
 
@@ -114,7 +111,8 @@ def main():
         Anew = Across + Aab
 
         # Update rocket with new data
-        Rocket.setCd(Cd*Anew/Aold)
+        # *Anew/Aold
+        Rocket.setCd(Cd)
 
         # Calculate equations of motion
         t = timelist[i]
@@ -132,17 +130,21 @@ def main():
         position.append(x[2])
         sensor.in_heigth(x[2])
 
-        sensor.in_acceleration(np.linalg.norm(dx[7:10]))
+        # Acceleration
+        quaternion = x[3:7]
+        Rbody2Inertial = Kinematics.Rquaternion(quaternion)
+        accWorld = Rbody2Inertial @ dx[7:10].T  
+        sensor.in_acceleration(np.linalg.norm(accWorld))
 
-        ti.sendHeightAndAcceleration(ser, -x[2], dx[7], iterationTime/i)
+        ti.sendData(ser, [-x[2], -accWorld[2], iterationTime/i])
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
-        dxs = dxs + [[np.linalg.norm(dx[7:10])]]
+        dxs = dxs + [[np.linalg.norm(accWorld)]]
         iterationTime += time.time() - start
     print("Average iteration time: ", iterationTime/steps)
     plt.show()
-    plt.pause(60)
+    plt.pause(60*10)
     
 
     lookUpTable=[]
@@ -151,15 +153,11 @@ def main():
     diff=0;
     for i in range(len(position)):
        hoydeN=-int(np.floor(position[i]))
-       print("Hoyde: ", hoyde)
-       print("HoydeN: ", hoydeN)
        if hoydeN < hoyde:
-           print("continue")
            continue
        if hoydeN>hoyde:
            #var2=int(np.floor(position[:,2][i+1]))
            diff=hoydeN-hoyde
-           print("Diff: ", diff)
            if i==0:
                a=(linearVelocity[i])/diff
                for j in range(diff):

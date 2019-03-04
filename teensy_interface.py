@@ -1,6 +1,7 @@
 import serial
 import serial.tools.list_ports
 import time
+import numpy as np
 
 def showPortList():
     if len(serial.tools.list_ports.comports()) == 0:
@@ -114,9 +115,17 @@ def readData(ser, prefix='', lines = 1):
             return None
             
 
-def sendHeightAndAcceleration(ser, height, acceleration, iterationTime):
+def sendData(ser, data):
     try:
-        string = ("<"+ str(round(iterationTime,3))+ ","+ str(round(height,2)) + "," + str(round(acceleration, 2)) +">").encode('utf-8')
+        string = "<"
+        for i in range(len(data)):
+            if isinstance(data[i], float) or isinstance(data[i], np.float64):
+                string += str(round(data[i], 3)) + ","
+            else:
+                string += str(data[i]) + ","
+        string = string[:-1]
+        string += ">"
+        string = string.encode('utf-8')
         ser.write(string)
         print("The printed string sent to teensy: ", string)
         return True
