@@ -136,11 +136,11 @@ def main():
         dxs = dxs + [[np.linalg.norm(accWorld)]]
         iterationTime += time.time() - start
     print("Average iteration time: ", iterationTime/steps)
-    FSMplot.plotData(teensyData, timeData)
+    #FSMplot.plotData(teensyData, timeData)
     plt.show()
     plt.pause(60*30)
-    
 
+def getLookupTable(position, linearVelocity):
     lookUpTable=[]
     hoydeN=0;
     hoyde=0;

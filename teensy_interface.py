@@ -114,17 +114,12 @@ def readData(ser, prefix='', lines = 1):
             print(error)
             return None
             
-
+  
+        
 def sendData(ser, data):
     try:
-        string = "<"
-        for i in range(len(data)):
-            if isinstance(data[i], float) or isinstance(data[i], np.float64):
-                string += str(round(data[i], 3)) + ","
-            else:
-                string += str(data[i]) + ","
-        string = string[:-1] + ">"
-        string = string.encode('utf-8')
+        string = ",".join([str(round(dat, 3)) for dat in data])
+        string = ("<" + string + ">").encode('utf-8')
         ser.write(string)
         #print("The printed string sent to teensy: ", string)
         return True
