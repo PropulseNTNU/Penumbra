@@ -48,7 +48,7 @@ def readFloatData(ser, prefix='', lines = 1):
     """
     if prefix != '':
         try:
-            print("Trying to read: ", prefix)
+            #print("Trying to read: ", prefix)
             lines_read = 0
             while lines_read < lines:
                 lines_read += 1
@@ -88,7 +88,7 @@ def readData(ser, prefix='', lines = 1):
     """
     if prefix != '':
         try:
-            print("Trying to read: ", prefix)
+            #print("Trying to read: ", prefix)
             lines_read = 0
             while lines_read < lines:
                 lines_read += 1
@@ -123,11 +123,10 @@ def sendData(ser, data):
                 string += str(round(data[i], 3)) + ","
             else:
                 string += str(data[i]) + ","
-        string = string[:-1]
-        string += ">"
+        string = string[:-1] + ">"
         string = string.encode('utf-8')
         ser.write(string)
-        print("The printed string sent to teensy: ", string)
+        #print("The printed string sent to teensy: ", string)
         return True
     except serial.SerialTimeoutException as error:
         print("The write process timed out.")

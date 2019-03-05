@@ -54,14 +54,11 @@ def RHS(x, t):
 
 def plotData(teensyData, timeData, sumTime, ser):
     for key, val in teensyData.items():
-        data = ti.readFloatData(ser, prefix=key, lines=100)
-        val[1].append(data)
+        val[1].append(ti.readFloatData(ser, prefix=key, lines=100))
     timeData.append(sumTime)
     
    
-
 def main():
-    sensor = ps.VirtualSensor()
     ser = ti.initSerial("/dev/ttyACM0", 9600, 1)#"/dev/ttyACM0"     /dev/cu.usbmodem4739891
 
     Aold = Across # Inital area
@@ -101,11 +98,7 @@ def main():
         ser.flushInput()
         simulatedTime += dt
 
-        itTime = ti.readFloatData(ser, prefix='itime', lines=100)
-        print("Iteration time teensy: ", itTime)
-
         Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
-        print("Control signal: ", Aab )
 
         plotData(teensyData, timeData, simulatedTime, ser)
 
@@ -113,7 +106,6 @@ def main():
         Anew = Across + Aab
 
         # Update rocket with new data
-        # *Anew/Aold
         Rocket.setCd(Cd*Anew/Aold)
 
         # Calculate equations of motion
@@ -130,14 +122,13 @@ def main():
         Aold = Anew # Update old area for next iteration
         linearVelocity.append(x[7])
         position.append(x[2])
-        sensor.in_heigth(x[2])
 
         # Acceleration
         quaternion = x[3:7]
         Rbody2Inertial = Kinematics.Rquaternion(quaternion)
         accWorld = Rbody2Inertial @ dx[7:10].T  
-        sensor.in_acceleration(np.linalg.norm(accWorld))
 
+        #send data to teensy
         ti.sendData(ser, [-x[2], -accWorld[2], iterationTime/i, x[7]])
 
         Aabs = Aabs + [[Aab]]
