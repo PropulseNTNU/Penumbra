@@ -57,7 +57,8 @@ def plotData(teensyData, timeData, sumTime, ser):
         data = ti.readFloatData(ser, prefix=key, lines=100)
         val[1].append(data)
     timeData.append(sumTime)
-    FSMplot.plotData(teensyData, timeData)
+    
+   
 
 def main():
     sensor = ps.VirtualSensor()
@@ -82,7 +83,8 @@ def main():
         "est_v": ("Estimated velocity[m/s]", []),
         "est_h": ("Estimated height[m]", []),
         "c_s": ("Airbrakes area[m^2]", []),
-        "iter": ("Iteration time Penumbra[s]", [])
+        "iter": ("Iteration time Penumbra[s]", []),
+        "vel": ("Actual velocity[m/s]", [])
         }
     #for plotting and writing 
     timeData = []
@@ -112,7 +114,7 @@ def main():
 
         # Update rocket with new data
         # *Anew/Aold
-        Rocket.setCd(Cd)
+        Rocket.setCd(Cd*Anew/Aold)
 
         # Calculate equations of motion
         t = timelist[i]
@@ -136,15 +138,16 @@ def main():
         accWorld = Rbody2Inertial @ dx[7:10].T  
         sensor.in_acceleration(np.linalg.norm(accWorld))
 
-        ti.sendData(ser, [-x[2], -accWorld[2], iterationTime/i])
+        ti.sendData(ser, [-x[2], -accWorld[2], iterationTime/i, x[7]])
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
         dxs = dxs + [[np.linalg.norm(accWorld)]]
         iterationTime += time.time() - start
     print("Average iteration time: ", iterationTime/steps)
+    FSMplot.plotData(teensyData, timeData)
     plt.show()
-    plt.pause(60*10)
+    plt.pause(60*30)
     
 
     lookUpTable=[]
