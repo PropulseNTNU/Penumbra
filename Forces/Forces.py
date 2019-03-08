@@ -2,7 +2,7 @@
 Module containing models of aero forces acting on a rocket
 
 Version: WIP
-Last edit: 14.02.2019
+Last edit: 08.03.2019
 
 --Propulse NTNU--
 """
@@ -58,15 +58,19 @@ def Drag1(rocket, position, linearVelocityBody, AoA):
     #TODO Complete this function (Using updateCd_2 for now, probably better)
     return -k*speed*velocity
 
-def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility=False):
+def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility=True):
     """
-    Reference: "Estimating the dynamic and aerodynamic paramters of
+    Reference: 
+    -"Estimating the dynamic and aerodynamic paramters of
     passively controlled high power rockets for flight simulaton" by Simon B. .. Feb 2009
-
+    -"OpenRocket techDoc, section 3.4.2"
+    
     "The comparison shows a good agreement between experimental and modelled data
     for vaules 0deg < AoA < 15deg, K=1" (page 12 in document)
 
     This function evaluates the drag coefficient Cd at the given state and updates the rocket object.
+    NOTE:
+            - Using skin friction model from OpenRocket [section 3.4.2]
 
     :param rocket: [rocket class] The rocket object
     :param position: [np.array] The position vector in world coordinates
@@ -74,7 +78,6 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     :param AoA: [float] the current angle of attack
     :param enable_compressibility: [bool] Set True if Compressibility should be taken into account. Default value: False
     """
-    z = abs(position[2])  # Vertical position of rocket
     speed = np.linalg.norm(linearVelocityBody)
     if speed < 0.01:
         rocket.setCd(0)
@@ -106,24 +109,25 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     Lr = rocket.getFin().getRootChord()
     Tf = rocket.getFin().getThickness()
     N = rocket.getNumberOfFins()
-    Afe = rocket.getFin().getSurfaceArea()
+    Afe = 2*N*rocket.getFin().getSurfaceArea()
+    Abe = rocket.getBody().getSurfaceArea()
     Afp = Afe + 1/2*D*Lr
     R = R*Lm/Ltot
     B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cff = 0
     # Conditions for different Reynold's number
-    if 0 < R <= Rcrit:
-        Cff = 1.328/(R**0.5)
-    elif R > Rcrit:
-        Cff = 0.074/(R**0.2) - B/R
+    if R < 1e4:
+        Cff = 1.48e-2
+    elif 1e4 < R < Rcrit:
+        Cff = 1/(1.5*np.log(R)-5.6)**2
+    else:
+        Cff = 0.032*(100e-6/D)**0.2
     # Drag contrib. (43)
-    Cd_f = 2*Cff*(1 + 2*Tf/Lm)*4*N*Afp/(np.pi*D**2)
+    Cd_f = Cff*((1 + D/(2*Ltot))*Abe + (1 + 2*Tf/Lm)*Afe)/(np.pi*D**2)
+    #Cd_f = 2*Cff*(1 + 2*Tf/Lm)*4*N*Afp/(np.pi*D**2)
 
     # Interference term (between body and fins) (44)
     Cd_int = 2*Cff*(1 + 2*Tf/Lm)*4*N*(1/2*D*Lr)/(np.pi*D**2)
-
-    # total zero AoA drag coefficient (eq 48)
-    CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
 
     # AoA corrections (assuming AoA is below 10 deg)
     # From body
@@ -136,17 +140,20 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     Cd_bA = 2*delta*AoA**2 + 3.6*eta*(1.36*Ltot - 0.55*Ln)/(np.pi*D)*(AoA**3)
     Cd_fA = (AoA**2)*4/(np.pi*D**2)*(1.2*Afp + 3.12*(kfb + kbf - 1)*Afe)
 
+    # total zero AoA drag coefficient (eq 48)
+    CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
     # FINAL CD
     CD = CD_0 + Cd_bA + Cd_fA
 
     # Compressibility:
     if enable_compressibility:
-        if M < 0.8:
-            CD = CD/np.sqrt(1 - M**2)
-        elif 0.8 <= M < 1.1:
-            CD = CD/np.sqrt(1 - (0.8)**2)
+        if M < 0.93:
+            CD /= np.sqrt(1 - M**2)
+        elif 0.93 <= M < 1.1:
+            CD /= np.sqrt(1 - (0.93)**2)
         else:
-            CD = CD/np.sqrt(M**2 - 1)
+            CD /= np.sqrt(M**2 - 1)
+
     # Update Cd of rcoket object
     rocket.setCd(CD)
 

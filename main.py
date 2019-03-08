@@ -6,41 +6,37 @@ Script for running one complete simulation
     - Plot results
 
 Version: WIP
-Last edit: 08.02.2019
+Last edit: 08.03.2019
 
 --Propulse NTNU--
 """
 
-# TODO
-# Add visual part
-
 import sys
+import numpy as np
+import matplotlib.pyplot as plt
 sys.path.append('Rocket/')
 sys.path.append('Forces/')
 sys.path.append('Trajectory/')
 sys.path.append('Visual')
-import numpy as np
 from Rocket1 import RocketSimple
-from Rocket2 import Rocket
 import Trajectory
-import Kinematics
-import matplotlib.pyplot as plt
-#import visual
 
 rad2deg = 180/np.pi
+deg2rad = 1/rad2deg
 
 # Initialize a rocket
 # FOR ROCKET CLASS 1
-path1 = 'Tests/myRocket1/'
-init_file1 = 'myRocket.dot'
-Rocket1 = RocketSimple.from_file(init_file1, path1)
+path1 = '../rockets/'
+init_file1 = 'init_rocket.r'
+rocket = RocketSimple.from_file(init_file1, path1)
 
 # Specify initial conditions
-initialInclination = 10/180.0*np.pi
-launchRampLength = 2.0*Rocket1.getLength()
+initialInclination = 0*deg2rad
+launchRampLength = 5
 timeStep = 0.03
-simulationTime= 25
-trajectory = Trajectory.calculateTrajectory(Rocket1, initialInclination, launchRampLength,
+simulationTime = 25
+trajectory = Trajectory.calculateTrajectory(rocket, initialInclination, 
+                                            launchRampLength, 
                                             timeStep, simulationTime)
 # Kinematics
 t = trajectory[0]
@@ -55,10 +51,15 @@ drag = trajectory[6]
 lift = trajectory[7]
 gravity = trajectory[8]
 thrust = trajectory[9]
-
-# Visualize trajectory
+aero_coeff = trajectory[10]
 
 # Plot
+# Force coefficients Cd and Cn
+plt.plot(t, aero_coeff[:,0], label='Cd(t)', lw=2, c='r')
+plt.plot(t, aero_coeff[:,1], label='Cn(t)', lw=2, c='b')
+plt.grid()
+plt.ylim(0.2, 1)
+plt.legend()
 # Position
 plt.figure()
 ax1 = plt.subplot(311, ylabel='x [m]')
@@ -109,7 +110,7 @@ ax2 = plt.subplot(312, ylabel='v_y [m/s]')
 ax2.plot(t, linearVelocity[:,1], lw=2, c='b')
 ax2.grid()
 plt.subplots_adjust(hspace=0.5)
-ax3 = plt.subplot(313, xlabel='time [s]', ylabel='v_altitude [m/s]')
+ax3 = plt.subplot(313, xlabel='time [s]', ylabel='v_z [m/s]')
 ax3.plot(t, -linearVelocity[:,2], lw=2, c='g')
 ax3.grid()
 
@@ -156,6 +157,6 @@ ax3.plot(t, lift[:,2], label='lift-z', lw=2, c='g')
 ax3.plot(t, gravity[:,2], label='gravity-z', lw=2, c='k')
 ax3.legend(loc='upper right')
 ax3.grid()
-
-# Show plots
+ 
+#Show plots
 plt.show()

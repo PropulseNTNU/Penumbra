@@ -571,7 +571,7 @@ class RocketSimple:
         self.__partsPlacement = partsPlacement
         self.__rocketStructure = np.array([nose, payload, body, fin])
         self.__rocketMotor = motor
-        self.__compressibility = False # Turn Compressibility on or off (default, off)
+        self.__compressibility = True # Turn Compressibility on or off (default, on)
         self.__N = numberOfFins  # Number of fins on rocket
         self.__massOfRocketStructure = np.array([part.getMass() for part in self.__rocketStructure])
         self.__massOfRocketStructure[3] = self.__N*self.__massOfRocketStructure[3]  # There are N fins
@@ -649,7 +649,7 @@ class RocketSimple:
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
         # DRAG COEFFICIENT (at some arbitrary speed, 30 m/s)
-        Forces.updateCd_2(self, [0, 0, 0], [30, 0, 0], 0)
+        Forces.updateCd_2(self, [0, 0, 0], [150, 0, 0], 0)
         print("Rocket initialized!\n")
         self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
 
