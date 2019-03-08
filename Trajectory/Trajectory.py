@@ -1,21 +1,34 @@
+"""
+A library to solve the equations of motion for a 6 DOF rocket object.
+
+2 frames of reference:
+    - World frame, NED convention (North(x)-East(y)-Down(z)) is the inertial frame
+    - Body frame, origin at nose-tip (x-axis is along the body (longitudinal),
+      y and z completes the Right hand system)
+
+State of rocket: [position, quaternion, linear Velocity, angular Velocity]
+
+"""
 import sys
 sys.path.append('../Rocket/')
 sys.path.append('../Forces/')
-sys.path.append('../Trajectory/')
+import Wind
 import numpy as np
-import math
 import scipy.linalg as splinalg
 import scipy.integrate as spintegrate
 import Kinematics
 import Forces
 
+# Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime):
-    # x is the state of the vector
+def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, **kwargs):
+    windObj = Wind.nullWind()
+    if "wind" in kwargs: windObj = kwargs["wind"]
+    # x is the state of the rocket
     # x = [position, quaternion, linear velocity, angular velocity]
     (x0, initialDirection) = initialState(rocket, initialInclination)
-    t, x, AoA, forces = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime)
+    t, x, AoA, forces = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
     n = len(t)
     drag = np.array([forces[i][:,0] for i in range(n)])
@@ -31,25 +44,45 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
     return t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity, thrust
 
 def initialState(rocket, initialInclination):
+    # Initial inclination of rocket
     initialPitch = np.pi/2-initialInclination
+    # Calculate rotation matrix (the rocket orientation measured in world coords.)
+    # at this initial inclination
     R = Kinematics.Ryzx(initialPitch, 0, 0)
+    # rocket longitudinal axis in world frame (x-axis of body)
     initialDirection= R[:,0]
     initialPosition = rocket.getLength()*initialDirection
     initialQuaternion = Kinematics.euler2quaternion(initialPitch, 0, 0)
     initialLinearVelocity = np.array([0, 0, 0])
     initialAngularVelocity = np.array([0, 0, 0])
+    # Initial state vector
     x0 = np.concatenate((initialPosition, initialQuaternion,
     initialLinearVelocity, initialAngularVelocity))
     return (x0, initialDirection)
 
-def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime):
-    N = math.ceil(simulationTime/timeStep)
+def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj):
     t = np.arange(0, simulationTime + timeStep, timeStep)
-    x = np.zeros(shape=(N,len(x0)))
-    sol, AoA, force = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection))
+    x = np.zeros(shape=(len(t),len(x0)))
+    sol, AoA, force = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj))
     return t, sol, AoA, force
 
-def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
+def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
+    """
+    x: [np.array] the current state of rocket
+    t: [float] at time t
+    rocket: [rocket object] the rocket object
+    launchRampLength: [float] The length of the launch ramp
+    initialDirection: [np.array] the initial direction of rocket (in world coords)
+
+    dx: Derivative of state x [np.array]
+    AoA: Angle of attack in radians [float]
+    forceMatrix: [3x4 matrix] A collection of the forces (one force vector for each column)
+
+    return: dx, AoA, forceMatrix
+    """
+    windVelocity = windObj.getWindVector(-x[2])
+    print(windObj)
+
     position = x[0:3]
     quaternion = x[3:7]
     linearVelocity = x[7:10]
@@ -63,6 +96,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     # dPosition and dQuaternion
     RotationBody2Inertial = Kinematics.Rquaternion(quaternion)
     RotationInertial2Body = RotationBody2Inertial.T
+    # Velocity of rocket in world frame
     dPosition = RotationBody2Inertial @ linearVelocity.T
     dQuaternion = Kinematics.quaternionGradient(quaternion) @ angularVelocity.T
     # forces in the body frame
@@ -70,17 +104,20 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     gravityWorld = np.array([0, 0, rocket.getMass(t)*Forces.g])
     gravityBody = RotationInertial2Body @ gravityWorld
     # aerodynamic forces
-    windVelocity = np.array([0, 0, 0])
     # Add wind to current rocket velocity to get total air velocity
     airVelocity = dPosition + windVelocity
     airSpeed = np.linalg.norm(airVelocity)
     xAxisBody = RotationBody2Inertial[:,0]
     dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
+    # definition of angle of attack
     AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
+    # unit vector that points in drag direction (body coords.)
     dirDragBody = RotationInertial2Body @ (-dirWindVelocity.T)
     projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
+    # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
+    # Get drag and lift for current state
     aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
     drag = RotationInertial2Body @ aeroForces[0].T
     lift = aeroForces[1]*dirLiftBody
@@ -95,11 +132,13 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     CBody = H.T @ splinalg.block_diag(S1, -S2) @ H
     # obtain generalized forces seen from origin of body frame
     totalForce = thrust + gravityBody + drag + lift
-    forceMatrix = np.array([drag, lift, gravityWorld, thrust]).T
+    forceMatrix = np.array([drag, lift, gravityBody, thrust]).T
+    # If rocket is on launch ramp, don't allow it to rotate, only accelerate (fixed to ramp)
     if stillAtLaunchRamp:
         totalForce = np.array([totalForce[0], 0, 0])
         totalMoment = np.array([0, 0, 0])
     else:
+        # After launch ramp, allow it to rotate (now calculating torques about COM)
         arm = rocket.getCOP(AoA) - rocket.getCOM(t)
         totalMoment = np.cross(arm, drag + lift)
     genForceBody = H.T @ np.concatenate((totalForce, totalMoment))
@@ -125,13 +164,13 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     :return: np.array[] ; matrix that contains the states at every instance (as row vectors)
     """
 
-    # Find times to evaluate and initialize array of positions
+    # array of time, initialize arrays to store state vectors (one state for each row)
     timelist = np.arange(tmin, tmax + dt, dt)
     stateMatrix = np.zeros((len(timelist), len(w0)))
     forceMatrix = np.zeros((len(timelist), 3, 4))
     aoa = np.zeros(len(timelist))
 
-    # Initialize
+    # Initialize with initial conditions.
     w = w0
     stateMatrix[0] = w
     steps = len(timelist)
@@ -159,6 +198,9 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     return stateMatrix, aoa, forceMatrix
 
 def unwrapState(x):
+    """
+    A simple routine to unwrap the state vector to its costituent parts (position, orientation, velocity etc.)
+    """
     position = x[:, 0:3]
     quaternion = x[:, 3:7]
     linearVelocity = x[:, 7:10]
