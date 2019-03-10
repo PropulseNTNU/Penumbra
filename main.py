@@ -6,7 +6,7 @@ Script for running one complete simulation
     - Plot results
 
 Version: WIP
-Last edit: 08.03.2019
+Last edit: 10.03.2019
 
 --Propulse NTNU--
 """
@@ -26,15 +26,15 @@ deg2rad = 1/rad2deg
 
 # Initialize a rocket
 # FOR ROCKET CLASS 1
-path1 = '../rockets/'
-init_file1 = 'init_rocket.r'
-rocket = RocketSimple.from_file(init_file1, path1)
+path = '../rockets/'
+init_file = 'init_rocket.r'
+rocket = RocketSimple.from_file(init_file, path)
 
 # Specify initial conditions
 initialInclination = 0*deg2rad
 launchRampLength = 5
 timeStep = 0.03
-simulationTime = 25
+simulationTime = 30
 trajectory = Trajectory.calculateTrajectory(rocket, initialInclination, 
                                             launchRampLength, 
                                             timeStep, simulationTime)
@@ -53,10 +53,12 @@ gravity = trajectory[8]
 thrust = trajectory[9]
 aero_coeff = trajectory[10]
 
+# Print trajectory statistics
+Trajectory.printTrajectoryStatistics(rocket, position, linearVelocity, t)
 # Plot
 # Force coefficients Cd and Cn
 plt.plot(t, aero_coeff[:,0], label='Cd(t)', lw=2, c='r')
-plt.plot(t, aero_coeff[:,1], label='Cn(t)', lw=2, c='b')
+#plt.plot(t, aero_coeff[:,1], label='Cn(t)', lw=2, c='b')
 plt.grid()
 plt.ylim(0.2, 1)
 plt.legend()

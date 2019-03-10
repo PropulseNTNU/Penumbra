@@ -206,3 +206,32 @@ def unwrapState(x):
     for index in range(len(quaternion)):
         euler[index,:] = Kinematics.quaternion2euler(quaternion[index,:])
     return (position, euler, linearVelocity, angularVelocity)
+
+def printTrajectoryStatistics(rocket, position, velocity, time):
+    """
+    :param rocket: [rocket object]
+    :param position: [np.array] The position matrix in worldcoords (len(time)x3 matrix)
+    :param velocity: [np.array] The velocity matrix in worldcoords (len(time)x3 matrix)
+    :param time: [np.array] The time array
+    """
+    x, y, z = position[:,0], position[:,1], position[:,2]
+    vx, vy, vz = velocity[:,0], velocity[:,1], velocity[:,2]
+    
+    # Statisitcs
+    index_apogee = np.argmax(-z)
+    index_max_vertical_speed = np.argmax(-vz)
+    apogee = -z[index_apogee]
+    apogee_time = time[index_apogee]
+    lat_distance = np.max(np.sqrt(x**2 + y**2))
+    max_vertical_speed = -vz[index_max_vertical_speed]/Forces.c
+    time_at_maxspeed = time[index_max_vertical_speed]
+    burn_out = rocket.getMotor().getBurnTime()
+    
+    print('\nTRAJECTORY STATISTICS:')
+    print(33*'-')
+    print('Max vertical speed: %1.2f Mach' %max_vertical_speed)
+    print('\t Time at max speed: %1.1f s' %time_at_maxspeed)  
+    print('\t Time at burnout: %1.1f s' %burn_out)
+    print('Apogee: %1.0f m' %apogee)
+    print('\t Time at apogee: %1.1f s' %apogee_time)
+    print('Lateral distance traveled: %1.0f m' %lat_distance)

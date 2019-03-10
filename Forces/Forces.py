@@ -2,7 +2,7 @@
 Module containing models of aero forces acting on a rocket
 
 Version: WIP
-Last edit: 08.03.2019
+Last edit: 10.03.2019
 
 --Propulse NTNU--
 """
@@ -82,7 +82,10 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     if speed < 0.01:
         rocket.setCd(0)
         return True
-    M = speed/c  # Mach number
+    # Temperature at altitude z (drops 6K per kilometer)
+    T = T0 - 6*position[2]/1000 
+    # Mach number at current state (speed of sound goes as sqrt(temperature))
+    M = speed/c*np.sqrt(T0/T)
     Rcrit = 5e5
     # For body and nose
     Ln = rocket.getNose().getLength()
