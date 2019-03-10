@@ -9,7 +9,7 @@ Last edit: 10.03.2019
 import numpy as np
 from scipy.constants import R, g, atmosphere
 
-T0 = 20 + 273 # Temperature at sea level [K]
+T0 = 27 + 273 # Temperature at sea level [K]
 P0 = atmosphere # Air pressure at sea level [Pa]
 m = 29e-3  # Molar mass of Air [kg]
 rho0 = P0/(R*T0/m)  # Air density at sea level [kg/m^3]

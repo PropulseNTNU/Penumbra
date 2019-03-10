@@ -57,10 +57,10 @@ aero_coeff = trajectory[10]
 Trajectory.printTrajectoryStatistics(rocket, position, linearVelocity, t)
 # Plot
 # Force coefficients Cd and Cn
-plt.plot(t, aero_coeff[:,0], label='Cd(t)', lw=2, c='r')
+plt.plot(-linearVelocity[:,2]/343, -drag[:,0], label='Drag(t)', lw=2, c='r')
 #plt.plot(t, aero_coeff[:,1], label='Cn(t)', lw=2, c='b')
 plt.grid()
-plt.ylim(0.2, 1)
+#plt.ylim(0.2, 1)
 plt.legend()
 # Position
 plt.figure()

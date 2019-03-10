@@ -73,12 +73,12 @@ def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, 
     # Initialization of rocket
     rocket = vp.compound([body, cone, a_fins, b_fins, inv_box], pos=vp.vector(0, 0, 1), axis=vp.vector(1, 0, 0), up=vp.vector(0, 0, 1), color=vp.vector(1,1,1))
 
-    COM_sphere = vp.sphere(radius = 0.04, color=vp.vector(0, 0, 0))
-    COP_sphere = vp.sphere(radius = 0.04, color=vp.vector(0, 0, 0))
-    thrust_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(1, 1, 0))
-    gravity_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(0, 1, 1))
-    lift_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(1, 0, 1))
-    drag_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(0, 0, 1))
+    #COM_sphere = vp.sphere(radius = 0.04, color=vp.vector(0, 0, 0))
+    #COP_sphere = vp.sphere(radius = 0.04, color=vp.vector(0, 0, 0))
+    #thrust_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(1, 1, 0))
+    #gravity_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(0, 1, 1))
+    #lift_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(1, 0, 1))
+    #drag_pointer = vp.arrow(shaftwidth = 0.1, color=vp.vector(0, 0, 1))
 
     a = 4
     c = 0.3
@@ -134,53 +134,53 @@ def launch(sample_rate, position, orientation, COM, COP, thrust, gravity, lift, 
 
         pitch, yaw, roll = orientation[step][0], orientation[step][1], orientation[step][2]
 
-        COM_x = x + COM[step] * np.cos(yaw) * np.cos(pitch)
-        COM_y = y + COM[step] * np.sin(yaw) * np.cos(pitch)
-        COM_z = z + COM[step] * np.sin(pitch)
+        #COM_x = x + COM[step] * np.cos(yaw) * np.cos(pitch)
+        #COM_y = y + COM[step] * np.sin(yaw) * np.cos(pitch)
+        #COM_z = z + COM[step] * np.sin(pitch)
 
-        COP_x = x + COP[step] * np.cos(yaw) * np.cos(pitch)
-        COP_y = y + COP[step] * np.sin(yaw) * np.cos(pitch)
-        COP_z = z + COP[step] * np.sin(pitch)
+        #COP_x = x + COP[step] * np.cos(yaw) * np.cos(pitch)
+        #COP_y = y + COP[step] * np.sin(yaw) * np.cos(pitch)
+        #COP_z = z + COP[step] * np.sin(pitch)
 
-        thrust_x = x + (-l) * np.cos(yaw) * np.cos(pitch)
-        thrust_y = y + (-l) * np.sin(yaw) * np.cos(pitch)
-        thrust_z = z + (-l) * np.sin(pitch)
+        #thrust_x = x + (-l) * np.cos(yaw) * np.cos(pitch)
+        #thrust_y = y + (-l) * np.sin(yaw) * np.cos(pitch)
+        #thrust_z = z + (-l) * np.sin(pitch)
 
-        thrust_mag = np.linalg.norm(thrust[step]) * force_scale
-        thrust_ax_x = thrust_mag * np.cos(yaw) * np.cos(pitch)
-        thrust_ax_y = thrust_mag * np.sin(yaw) * np.cos(pitch)
-        thrust_ax_z = thrust_mag * np.sin(pitch)
+        #thrust_mag = np.linalg.norm(thrust[step]) * force_scale
+        #thrust_ax_x = thrust_mag * np.cos(yaw) * np.cos(pitch)
+        #thrust_ax_y = thrust_mag * np.sin(yaw) * np.cos(pitch)
+        #thrust_ax_z = thrust_mag * np.sin(pitch)
 
-        lift_mag = lift[step][0] * force_scale
-        lift_ax_x = 0
-        lift_ax_y = 0
-        lift_ax_z = lift_mag
+        #lift_mag = lift[step][0] * force_scale
+        #lift_ax_x = 0
+        #lift_ax_y = 0
+        #lift_ax_z = lift_mag
 
-        drag_mag = np.linalg.norm(drag[step]) * force_scale
-        drag_ax_x = drag_mag
-        drag_ax_y = 0
-        drag_ax_z = 0
+        #drag_mag = np.linalg.norm(drag[step]) * force_scale
+        #drag_ax_x = drag_mag
+        #drag_ax_y = 0
+        #drag_ax_z = 0
 
-        gravity_mag = np.linalg.norm(gravity[step]) * force_scale
+        #gravity_mag = np.linalg.norm(gravity[step]) * force_scale
 
-        thrust_pointer.pos = vp.vector(thrust_x, thrust_y, thrust_z)
-        thrust_pointer.axis = vp.vector(thrust_ax_x, thrust_ax_y, thrust_ax_z)
+        #thrust_pointer.pos = vp.vector(thrust_x, thrust_y, thrust_z)
+        #thrust_pointer.axis = vp.vector(thrust_ax_x, thrust_ax_y, thrust_ax_z)
 
-        gravity_pointer.pos = vp.vector(COM_x, COM_y, COM_z)
-        gravity_pointer.axis = vp.vector(0, 0, -gravity_mag)
+        #gravity_pointer.pos = vp.vector(COM_x, COM_y, COM_z)
+        #gravity_pointer.axis = vp.vector(0, 0, -gravity_mag)
 
-        lift_pointer.pos = vp.vector(COP_x, COP_y, COP_z)
-        lift_pointer.axis = vp.vector(lift_ax_x, lift_ax_y, lift_ax_z)
+        #lift_pointer.pos = vp.vector(COP_x, COP_y, COP_z)
+        #lift_pointer.axis = vp.vector(lift_ax_x, lift_ax_y, lift_ax_z)
 
-        drag_pointer.pos = vp.vector(COP_x, COP_y, COP_z)
-        drag_pointer.axis = vp.vector(drag_ax_x,drag_ax_y, drag_ax_z)
+        #drag_pointer.pos = vp.vector(COP_x, COP_y, COP_z)
+        #drag_pointer.axis = vp.vector(drag_ax_x,drag_ax_y, drag_ax_z)
+
+        #COM_sphere.pos = vp.vector(COM_x, COM_y, COM_z)
+        #COP_sphere.pos = vp.vector(COP_x, COP_y, COP_z)
 
         rocket.rotate(angle=pitch, axis=rocket.normal)
         rocket.rotate(angle=yaw, axis=rocket.up)
         rocket.rotate(angle=roll, axis=rocket.axis)
-
-        COM_sphere.pos = vp.vector(COM_x, COM_y, COM_z)
-        COP_sphere.pos = vp.vector(COP_x, COP_y, COP_z)
 
         rocket.pos = vp.vector(x, y, z)
         vp.sleep(1/sample_rate)
