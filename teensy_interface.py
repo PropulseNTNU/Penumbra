@@ -59,7 +59,7 @@ def readFloatData(ser, prefix='', lines = 1):
                         pass
             print("Read " + str(lines_read) + " lines without finding the control signal.")
             return None
-        except AttributeError as error:
+         except AttributeError as error:
             print("The serial connection is not initialized. Run the initSerial function first")
             print(error)
             return None
@@ -72,7 +72,6 @@ def readFloatData(ser, prefix='', lines = 1):
             print(error)
             return None
             
-
 def sendHeightAndVelocity(ser, height, velocity):
     try:
         ser.write((("h"+ str(height) + "v" + str(velocity))).encode("utf-8"))
@@ -81,7 +80,6 @@ def sendHeightAndVelocity(ser, height, velocity):
         print("The write process timed out.")
         print(error)
         return False
- 
-    
+
 def close(ser):
     ser.close()

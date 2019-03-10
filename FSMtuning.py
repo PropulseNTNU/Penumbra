@@ -107,7 +107,6 @@ def main():
     plt.plot(t, dxs[:len(t)])
     plt.show()
 
-
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     """
     x: [np.array] the current state of rocket
@@ -188,7 +187,6 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection):
     dx = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
 
     return dx
-
 
 if __name__ == '__main__':
     main()

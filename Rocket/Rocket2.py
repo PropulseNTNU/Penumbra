@@ -22,7 +22,7 @@ plt.rc('font', **font)
 plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 
-class Rocket:
+class RocketCFD:
 
     def __init__(self, *args):
         print('Initializing rocket..')
