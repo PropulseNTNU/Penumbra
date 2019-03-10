@@ -38,9 +38,9 @@ Rocket1 = RocketSimple.from_file(init_file1, path1)
 # Specify initial conditions
 initialInclination = 10/180.0*np.pi
 launchRampLength = 2.0*Rocket1.getLength()
-timeStep = 0.03
+timeStep = 0.05
 simulationTime= 25
-trajectory = Trajectory.calculateTrajectory(Rocket1, initialInclination, launchRampLength,
+trajectory = Trajectory.calculateTrajectoryWithBrakes(Rocket1, initialInclination, launchRampLength,
                                             timeStep, simulationTime)
 # Kinematics
 t = trajectory[0]
