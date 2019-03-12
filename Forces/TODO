@@ -1,13 +1,4 @@
-Forces.py
-    Write IAM
-    Write CAM
 
-    TODO: Ask team how COM and COP should be calculated for simple rocket class DONE 
-        CONCLUSION:
-        By using the definition of COM and Barrowman for COP.
-
-
-
-
-
-
+Compressibility corrections
+Skin friction drag
+Pitch dampening 

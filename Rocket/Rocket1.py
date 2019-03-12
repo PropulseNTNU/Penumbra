@@ -74,7 +74,8 @@ class Nose:
             d = self.__thickness
             R2 = self.__diameter/2  # Outer radius of cone
             H2 = self.__length
-            H1 = H2 - d
+            ang = np.arctan(R2/H2)
+            H1 = H2 - d/np.sin(ang)
             R1 = R2*H1/H2
             return np.pi/3*(H2*R2**2 - H1*R1**2)
         elif self.__noseType == noseTypes[1]:  # Hemisphere
@@ -86,7 +87,8 @@ class Nose:
             d = self.__thickness
             R2 = self.__diameter/2
             H2 = self.__length
-            H1 = H2 - d
+            ang = np.arctan(R2/H2)
+            H1 = H2 - d/np.sin(ang)
             R1 = R2*H1/H2
             return ((3*np.pi**2)/32)*R2**2*H2-((3*np.pi**2)/32)*R1**2*H1
 
@@ -95,7 +97,8 @@ class Nose:
             d = self.__thickness
             R2 = self.__diameter/2  # Outer radius of cone
             H2 = self.__length
-            H1 = H2 - d
+            ang = np.arctan(R2/H2)
+            H1 = H2 - d/np.sin(ang)
             R1 = R2*H1/H2
             return np.pi/3*H1*R1**2
         elif self.__noseType == noseTypes[1]:  # Hemisphere
@@ -107,7 +110,8 @@ class Nose:
             d = self.__thickness
             R2 = self.__diameter/2
             H2 = self.__length
-            H1 = H2 - d
+            ang = np.arctan(R2/H2)
+            H1 = H2 - d/np.sin(ang)
             R1 = R2*H1/H2
             return ((3*np.pi**2)/32)*R1**2*H1
 
@@ -126,6 +130,7 @@ class Nose:
     def getInertiaMatrix(self):
         if self.__noseType == noseTypes[0] or self.__noseType == noseTypes[2]:  # Conic and Ogive
             r = self.__diameter/2
+            l = self.__length
             m = self.getMass()
             Ixx = 1/2*m*r**2
             Iyy = 3*Ixx - m*self.getCOM()[0]**2
@@ -149,7 +154,8 @@ class Nose:
             d = self.__thickness
             R2 = self.__diameter/2  # Outer radius of cone
             H2 = self.__length
-            H1 = H2 - d
+            ang = np.arctan(R2/H2)
+            H1 = H2 - d/np.sin(ang)
             R1 = R2*H1/H2
             a = 1/2*H2**2 - 2*H2**3/(3*H1) + H2**4/(4*H1**2)
             COM = np.pi/V*((H2*R2)**2/12 - a*R1**2)
@@ -163,7 +169,8 @@ class Nose:
             d = self.__thickness
             R2 = self.__diameter/2  # Outer radius of cone
             H2 = self.__length
-            H1 = H2 - d
+            ang = np.arctan(R2/H2)
+            H1 = H2 - d/np.sin(ang)
             R1 = R2*H1/H2
             COM = ((32/(15*np.pi)) * (H2**2 * R2**2 - H1**2 * R1**2)
             /(H2 * R2**2 - H1 * R1**2) - (H2/2))
@@ -243,7 +250,7 @@ class Body:
         l = self.__length
         m = self.getMass()
         Ixx = 1/2*m*(r1**2 + r2**2)
-        Iyy = 1/12*m*l**2
+        Iyy = 1/12*m*(3*(r1**2 + r2**2) + l**2)
         Izz = Iyy
         return np.diag([Ixx, Iyy, Izz])
 
@@ -265,6 +272,12 @@ class Fin:
         self.__rootChord = args[1]  # Fin root chord
         self.__tipChord = args[2]  # Fin tip chord
         self.__angle = args[3]  # Angle of ray from body to top outer edge
+        # Calculate mid chord from geometry
+        sc = self.__semiChord
+        rc = self.__rootChord
+        tc = self.__tipChord
+        a = self.__angle
+        self.__midChord = np.sqrt(sc**2 + (sc/np.tan(a) + 1/2*(tc - rc))**2)
         self.__thickness = args[4]
         self.__density = args[5]
         print("Fin initialized!\n")
@@ -274,7 +287,7 @@ class Fin:
         d = str(self.__thickness*1e3)
         m = str(self.getMass())
         rho = str(self.__density)
-        return "Semi chord: " + Chord + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + " kg\n" \
+        return "Semi chord: " + Chord + "Mid chord: " + self.__midChord + " m\n" + "Thickness: " + d + " mm\n" + "Mass: " + m + " kg\n" \
                + "Density: " + rho + " kgm^-3"
 
     # Member functions
@@ -300,8 +313,14 @@ class Fin:
     def getSemiChord(self):
         return self.__semiChord
 
+    def getMidChord(self):
+        return self.__midChord
+
     def getTopEdgeAngle(self):
         return self.__angle
+
+    def getThickness(self):
+        return self.__thickness
 
     def getMass(self):
         return self.__density*self.getVolume()
@@ -552,13 +571,13 @@ class RocketSimple:
         self.__partsPlacement = partsPlacement
         self.__rocketStructure = np.array([nose, payload, body, fin])
         self.__rocketMotor = motor
+        self.__compressibility = True # Turn Compressibility on or off (default, on)
         self.__N = numberOfFins  # Number of fins on rocket
         self.__massOfRocketStructure = np.array([part.getMass() for part in self.__rocketStructure])
         self.__massOfRocketStructure[3] = self.__N*self.__massOfRocketStructure[3]  # There are N fins
         print("\tCalculating rocket mass..")
-        # (add 4 kg for now to account for electronics/recovery etc.)
         # TODO Account for electronics/recovery etc.
-        self.__rocketMass = self.__massOfRocketStructure.sum() + 4
+        self.__rocketMass = self.__massOfRocketStructure.sum()
         self.__motorMass = self.__rocketMotor.getMass(0)
         # TOTAL MASS
         self.__mass = self.__rocketMass + self.__motorMass
@@ -600,15 +619,16 @@ class RocketSimple:
         # Fin COP
         R = body.getDiameter()/2  # Radius of body
         SC = fin.getSemiChord()  # Semi chord of fins
+        MC = fin.getMidChord() # Mid chord of fin
         RC = fin.getRootChord()
         TC = fin.getTipChord()
         theta = fin.getTopEdgeAngle()*np.pi/180.0 # TopEdgeAngle is in degrees
         y = SC*(2*TC + RC)/(3*(TC + RC))
         Lf = np.sqrt(SC**2 + (SC/np.tan(theta) + 1/2*(TC - RC))**2)
-        self.__CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*Lf/(RC + TC))**2)))
-        Xb = partsPlacement[0] - nose.getLength()
+        self.__CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*MC/(RC + TC))**2)))
+        Xb = partsPlacement[0] - nose.getLength() + RC  # Position of leading edge of fin on the body (relative to nose tip)
         Xr = -SC/np.tan(theta)
-        Xf = Xb + Xr/3*(RC + 2*TC)/(RC + TC) - 1/6*((RC + TC) - RC*TC/(RC + TC))
+        Xf = Xb - MC/3*(RC + 2*TC)/(RC + TC) - 1/6*((RC + TC) - RC*TC/(RC + TC))
         self.__Xcp_fin = Xf
 
         print("\tCalculating inertia matrix of rocket..")
@@ -628,10 +648,10 @@ class RocketSimple:
         self.__length = nose.getLength() + body.getLength() + (SC/np.tan(theta)-RC) + TC
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
-        # DRAG COEFFICIENT (at some arbitrary speed)
-        self.__Cd = 1
+        # DRAG COEFFICIENT (at some arbitrary speed, 30 m/s)
+        Forces.updateCd_2(self, [0, 0, 0], [150, 0, 0], 0)
         print("Rocket initialized!\n")
-        self.printSpecifications(0, 5*np.pi/180) # Specs at AoA = 5 deg.
+        self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
 
     # Rocket parts
     def getNose(self):
@@ -658,7 +678,7 @@ class RocketSimple:
         return self.__mass
 
     def setMass(self, mass):
-        self.__rocketMass = mass
+        self.__rocketMass = mass - self.__motorMass
 
     def getInertiaMatrix(self, t):
         self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t)[0] - self.__rocketStructure[
@@ -684,7 +704,13 @@ class RocketSimple:
         return np.array([self.__COM, 0, 0])
 
     def setCOM(self, com):
-        self.__COM = com
+        Ms = self.__rocketMass
+        Mm = self.__motorMass
+        M = Mm + Ms
+        Xcom = self.__COM
+        XcomMotor = self.__motorCOM
+
+        self.__COM = (M*Xcom - Mm*XcomMotor)/Ms
 
     def getCOMofParts(self):
         return self.__COMofRocketStructure
@@ -697,17 +723,27 @@ class RocketSimple:
         :return: [np.array] Position of COP relative to nose tip
         """
         #Nose, Body and Fins Cn
-        CNnose = self.__CNnose*np.sin(AoA)
-        CNfin = self.__CNfin*AoA
-        CNbody = self.__CNbody*np.sin(AoA)**2
-        CNrocket = CNnose + CNbody + CNfin
-        COP0 = (CNnose*self.__Xcp_nose + CNbody*self.__Xcp_body + CNfin*self.__Xcp_fin)/CNrocket
+        CNnose = self.__CNnose
+        CNfin = self.__CNfin
+        CNbody = self.__CNbody
+        CNrocket = CNnose + CNbody*AoA + CNfin
+        COP0 = (CNnose*self.__Xcp_nose + CNbody*AoA*self.__Xcp_body + CNfin*self.__Xcp_fin)/CNrocket
         return np.array([COP0, 0, 0])
 
     def getStabilityMargin(self, AoA, t=0):
         COM = self.getCOM(t)[0]
         COP = self.getCOP(AoA)[0]
         return COM - COP
+
+    def compressibleFlow(self, state):
+        if type(state) == bool:
+            self.__compressibility = state
+        else:
+            print("Error: Enter either True or False in 'compressibleFlow'.")
+            exit(1)
+
+    def getCompressibilityState(self):
+        return self.__compressibility
 
     def getAeroForces(self, AoA, position, velocity):
         """

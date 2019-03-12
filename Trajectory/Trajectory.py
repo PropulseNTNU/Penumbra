@@ -103,7 +103,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     gravityBody = RotationInertial2Body @ gravityWorld
     # aerodynamic forces
     # Add wind to current rocket velocity to get total air velocity
-    airVelocity = dPosition + windVelocity
+    airVelocity = dPosition
     airSpeed = np.linalg.norm(airVelocity)
     xAxisBody = RotationBody2Inertial[:,0]
     dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
@@ -116,6 +116,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
     # Get drag and lift for current state
+    Forces.updateCd_2(rocket, position, linearVelocity, AoA, rocket.getCompressibilityState())
     aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
     drag = RotationInertial2Body @ aeroForces[0].T
     lift = aeroForces[1]*dirLiftBody
@@ -131,6 +132,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     # obtain generalized forces seen from origin of body frame
     totalForce = thrust + gravityBody + drag + lift
     forceMatrix = np.array([drag, lift, gravityBody, thrust]).T
+    aero_coeff = np.array([rocket.getCd(), rocket.getCn(AoA)])
     # If rocket is on launch ramp, don't allow it to rotate, only accelerate (fixed to ramp)
     if stillAtLaunchRamp:
         totalForce = np.array([totalForce[0], 0, 0])
@@ -166,6 +168,7 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     timelist = np.arange(tmin, tmax + dt, dt)
     stateMatrix = np.zeros((len(timelist), len(w0)))
     forceMatrix = np.zeros((len(timelist), 3, 4))
+    aero_coeffMatrix = np.zeros((len(timelist), 2))
     aoa = np.zeros(len(timelist))
     windVelocities = np.zeros((len(timelist), 3))
 
@@ -190,6 +193,7 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
         w = w + dt / 6 * (s1 + 2 * s2 + 2 * s3 + s4)
         stateMatrix[i] = w  # Store new state
         forceMatrix[i] = force  # Store forces
+        aero_coeffMatrix[i] = aero_coeff # Store aero-coefficients
         aoa[i] = AoA  # store AoA
         windVelocities[i] = windVelocity
         #print("Iteration %5d/%d" % (i, steps - 1))
@@ -209,3 +213,32 @@ def unwrapState(x):
     for index in range(len(quaternion)):
         euler[index,:] = Kinematics.quaternion2euler(quaternion[index,:])
     return (position, euler, linearVelocity, angularVelocity)
+
+def printTrajectoryStatistics(rocket, position, velocity, time):
+    """
+    :param rocket: [rocket object]
+    :param position: [np.array] The position matrix in worldcoords (len(time)x3 matrix)
+    :param velocity: [np.array] The velocity matrix in worldcoords (len(time)x3 matrix)
+    :param time: [np.array] The time array
+    """
+    x, y, z = position[:,0], position[:,1], position[:,2]
+    vx, vy, vz = velocity[:,0], velocity[:,1], velocity[:,2]
+
+    # Statisitcs
+    index_apogee = np.argmax(-z)
+    index_max_vertical_speed = np.argmax(-vz)
+    apogee = -z[index_apogee]
+    apogee_time = time[index_apogee]
+    lat_distance = np.max(np.sqrt(x**2 + y**2))
+    max_vertical_speed = -vz[index_max_vertical_speed]/Forces.c
+    time_at_maxspeed = time[index_max_vertical_speed]
+    burn_out = rocket.getMotor().getBurnTime()
+
+    print('\nTRAJECTORY STATISTICS:')
+    print(33*'-')
+    print('Max vertical speed: %1.2f Mach' %max_vertical_speed)
+    print('\t Time at max speed: %1.1f s' %time_at_maxspeed)
+    print('\t Time at burnout: %1.1f s' %burn_out)
+    print('Apogee: %1.0f m' %apogee)
+    print('\t Time at apogee: %1.1f s' %apogee_time)
+    print('Lateral distance traveled: %1.0f m' %lat_distance)
