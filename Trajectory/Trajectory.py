@@ -28,7 +28,7 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
     # x is the state of the rocket
     # x = [position, quaternion, linear velocity, angular velocity]
     (x0, initialDirection) = initialState(rocket, initialInclination)
-    t, x, AoA, forces = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj)
+    t, x, AoA, forces, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
     n = len(t)
     drag = np.array([forces[i][:,0] for i in range(n)])
@@ -41,7 +41,7 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
         RotationBody2Inertial = Kinematics.Ryzx(euler[i][0], euler[i][1], euler[i][2])
         velocity[i] = RotationBody2Inertial @ linearVelocity[i]
 
-    return t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity, thrust
+    return t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity, thrust, windVelocities
 
 def initialState(rocket, initialInclination):
     # Initial inclination of rocket
@@ -63,8 +63,8 @@ def initialState(rocket, initialInclination):
 def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj):
     t = np.arange(0, simulationTime + timeStep, timeStep)
     x = np.zeros(shape=(len(t),len(x0)))
-    sol, AoA, force = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj))
-    return t, sol, AoA, force
+    sol, AoA, force, windVelocities = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj))
+    return t, sol, AoA, force, windVelocities
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     """
@@ -80,9 +80,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
 
     return: dx, AoA, forceMatrix
     """
-    windVelocity = windObj.getWindVector(-x[2])
-    print(windObj)
-
+    windVelocity = windObj.getWindVector(-x[2], t)
     position = x[0:3]
     quaternion = x[3:7]
     linearVelocity = x[7:10]
@@ -148,7 +146,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     dGeneralizedVelocity = np.linalg.solve(IBody, rhs)
     dx = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
 
-    return dx, AoA, forceMatrix
+    return dx, AoA, forceMatrix, windVelocity
 
 # Solving simultaneous diff. equations
 def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
@@ -169,6 +167,7 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     stateMatrix = np.zeros((len(timelist), len(w0)))
     forceMatrix = np.zeros((len(timelist), 3, 4))
     aoa = np.zeros(len(timelist))
+    windVelocities = np.zeros((len(timelist), 3))
 
     # Initialize with initial conditions.
     w = w0
@@ -183,7 +182,7 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     # Runge-Kutta algorithm
     for i in range(1, steps):
         t = timelist[i]
-        s1, AoA, force = g(w, t)
+        s1, AoA, force, windVelocity = g(w, t)
         s2 = g(w + dt / 2 * s1, t + dt / 2)[0] # get dx only
         s3 = g(w + dt / 2 * s2, t + dt / 2)[0] # get dx only
         s4 = g(w + dt * s3, t + dt)[0] # get dx only
@@ -192,10 +191,11 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
         stateMatrix[i] = w  # Store new state
         forceMatrix[i] = force  # Store forces
         aoa[i] = AoA  # store AoA
+        windVelocities[i] = windVelocity
         #print("Iteration %5d/%d" % (i, steps - 1))
 
     # Return state, AoA and forces at every instance (np.arrays)
-    return stateMatrix, aoa, forceMatrix
+    return stateMatrix, aoa, forceMatrix, windVelocities
 
 def unwrapState(x):
     """
