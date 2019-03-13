@@ -33,7 +33,7 @@ rampLength = 5 # [M]
 timeStep = 0.03 # [sec]
 simTime = 45 # [sec]
 
-windObj = Wind.whiteWind(29.5, 4, np.pi, simTime + 0.1)
+windObj = Wind.pinkWind(29.5, 4, np.pi, simTime + 0.1)
 
 # Calculating trajectory
 tra1 = Trajectory.calculateTrajectory(

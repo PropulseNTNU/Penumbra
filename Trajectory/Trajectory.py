@@ -103,7 +103,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     gravityBody = RotationInertial2Body @ gravityWorld
     # aerodynamic forces
     # Add wind to current rocket velocity to get total air velocity
-    airVelocity = dPosition
+    airVelocity = dPosition + windVelocity
     airSpeed = np.linalg.norm(airVelocity)
     xAxisBody = RotationBody2Inertial[:,0]
     dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))

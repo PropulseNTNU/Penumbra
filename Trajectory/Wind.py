@@ -70,3 +70,27 @@ class whiteWind(engWind):
         mag = self.getMagnitude(alt, t)
         direction = self.direction
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
+
+class pinkWind(whiteWind):
+    def __init__(self, alt0, speed0, direction, timeDomain):
+        alpha = 5/3
+        whiteWind.__init__(self, alt0, speed0, direction, timeDomain)
+        self.timeDomain = timeDomain
+        self.freq = 20
+        t = np.linspace(0, timeDomain, self.freq * timeDomain)
+
+        n = int(np.ceil(self.freq*timeDomain))
+        x = np.zeros(n)
+        for i in range(2, n):
+            a1 = (-alpha/2)
+            a2 = (1 - alpha/2)*(a1 / 2)
+            x[i] = np.random.normal() - a1 * x[i-1] - a2 * x[i - 2]
+
+        self.Uv = interp1d(t, x)
+
+
+    def __str__(self):
+        outString = "Pink wind\n" + "-"*16 +\
+        "\nalpha: {:.3f}\nalt0: {:.3f}\nspeed0: {:.3f}\ndirection: {:.3f}"\
+        .format(self.alpha, self.alt0, self.speed0, self.direction)
+        return outString
