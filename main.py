@@ -26,21 +26,23 @@ deg2rad = 1/rad2deg
 
 # Initialize a rocket
 # FOR ROCKET CLASS 1
-path = '../rockets/'
+path = 'rockets/'
 init_file = 'init_rocket.r'
 rocket = RocketSimple.from_file(init_file, path)
 
 # Specify initial conditions
-#initialInclination = 10/180.0*np.pi
-#launchRampLength = 2.0*Rocket1.getLength()
-#timeStep = 0.05
-#simulationTime= 25
-#trajectory = Trajectory.calculateTrajectoryWithBrakes(rocket, initialInclination, launchRampLength,
-initialInclination = 0*deg2rad
+
+initialInclination = 10/180.0*np.pi
 launchRampLength = 5
-timeStep = 0.03
-simulationTime = 30
-trajectory = Trajectory.calculateTrajectory(rocket, initialInclination,launchRampLength,timeStep, simulationTime)
+timeStep = 0.05
+simulationTime= 25
+trajectory = Trajectory.calculateTrajectoryWithBrakes(rocket, initialInclination, launchRampLength,timeStep, simulationTime)
+
+#initialInclination = 0*deg2rad
+#launchRampLength = 5
+#timeStep = 0.03
+#simulationTime = 30
+#trajectory = Trajectory.calculateTrajectory(rocket, initialInclination,launchRampLength,timeStep, simulationTime)
 
 # Kinematics
 t = trajectory[0]
