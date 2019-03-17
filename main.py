@@ -6,7 +6,7 @@ Script for running one complete simulation
     - Plot results
 
 Version: WIP
-Last edit: 10.03.2019
+Last edit: 12.03.2019
 
 --Propulse NTNU--
 """
@@ -57,7 +57,7 @@ drag = trajectory[6]
 lift = trajectory[7]
 gravity = trajectory[8]
 thrust = trajectory[9]
-aero_coeff = trajectory[10]
+aero_coeff = trajectory[11]
 
 # Print trajectory statistics
 Trajectory.printTrajectoryStatistics(rocket, position, linearVelocity, t)
