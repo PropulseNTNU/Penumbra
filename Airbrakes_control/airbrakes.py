@@ -3,6 +3,7 @@ import kalman_filter
 import interpolation
 import math
 from numpy import genfromtxt
+import matplotlib.pyplot as plt
 
 
 dt=0.03
@@ -31,11 +32,10 @@ def test_kalman():
     data = genfromtxt('data/flight1.csv', delimiter=',')
     estimates_h = []
     estimates_v = []
-    prev_time = data[0][0] - 30 #just to have a dt at the start
+    prev_time = data[0][0] - 40 #just to have a dt at the start
     for row in data:
-        print(row[0])
         dt = (row[0] - prev_time) / 1000
-        est_h, est_v = kalman_filter.kalman(row[4], row[21], dt)
+        est_h, est_v = kalman_filter.kalman(row[4], -row[21], dt)
         estimates_h.append(est_h.item(0))
         estimates_v.append(est_v.item(0))
         prev_time = row[0]
@@ -44,5 +44,12 @@ def test_kalman():
     print(estimates_h)
     print("Velocity: ")
     print(estimates_v)
+
+    plt.plot(estimates_h)
+    plt.ylabel('Est Height')
+    plt.plot(estimates_v)
+    plt.ylabel('Est Velocity')
+    plt.show()
+
 
 test_kalman()

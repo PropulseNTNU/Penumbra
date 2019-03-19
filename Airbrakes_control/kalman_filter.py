@@ -3,7 +3,7 @@ import numpy as np
 #Initiates matrices needed in the kalman filter
 C_d=np.matrix([1,0])
 #const Matrix<2,2> E_d={0.00001,0.0000002,0.000000004,0.0000003};
-Q=np.matrix([[300,0],[0,1]])
+Q=np.matrix([[1000,0],[0,1]])
 R=[1];
 I=np.matrix([[1,0],[0,1]])
 P_k_bar=np.matrix([[1,0],[0,0.1]])
