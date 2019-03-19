@@ -11,7 +11,8 @@ import sys
 sys.path.append('Rocket/')
 sys.path.append('Forces/')
 sys.path.append('Trajectory/')
-sys.path.append('Visual')
+sys.path.append('Visual/')
+sys.path.append('Airbrakes_control/')
 import numpy as np
 import scipy.linalg as splinalg
 from Rocket1 import RocketSimple
@@ -23,6 +24,10 @@ import teensy_interface as ti
 import matplotlib.pyplot as plt
 import time
 import FSMplotting as FSMplot
+import Airbrakes_control
+from Airbrakes_control import airbrakes
+
+
 
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
@@ -37,7 +42,7 @@ Cd = 0.5
 Across = np.pi*(Rocket.getBody().getDiameter()/2)**2
 
 # Specify initial conditions
-initialInclination = 6/180.0*np.pi
+initialInclination = 20/180.0*np.pi
 launchRampLength = 2.0*Rocket.getLength()
 dt = 0.03
 simulationTime= 30
@@ -51,12 +56,13 @@ stateMatrix = np.zeros((len(timelist), len(x0)))
 
 def RHS(x, t):
     return equationsMotion(x, t, Rocket, launchRampLength, initialState)
-
+"""
 def plotData(teensyData, timeData, sumTime, ser):
     for key, val in teensyData.items():
         data = ti.readFloatData(ser, prefix=key, lines=100)
         val[1].append(data)
-    timeData.append(sumTime)
+    timeData.append(sumTime)"""
+
 
 
 
@@ -74,38 +80,51 @@ def main():
     xs = []
     dxs = []
 
-    sumTime = 0
     Aab = 0
 
     ## Data from teensy
     teensyData = {
-        "t_h": ("height", []),
-        "t_a": ("acceleration", []),
-        "est_v": ("estimatedVelocity", []),
-        "est_h": ("estimatedHeight", []),
-        "c_s": ("Controll signal", [])
-
+        "t_h": ("Height[m]", []),
+        "t_ax": ("Acceleration x[m/s^2]", []),
+        "t_ay": ("Acceleration y[m/s^2]", []),
+        "t_az": ("Acceleration z[m/s^2]", []),
+        #"est_v": ("Estimated velocity[m/s]", []),
+        #"est_h": ("Estimated height[m]", []),
+        "c_s": ("Airbrakes area[m^2]", []),
+        #"iter": ("Iteration time Penumbra[s]", []),
+        "vel": ("Actual velocity[m/s]", []),
+        #"error_h": ("Error estimated h vs. actual h",[])
         }
-    #for plotting
+    #for plotting and writing
     timeData = []
     linearVelocity=[]
     position=[]
-    for i in range(1, steps):
-        ser.flushInput()
-        sumTime += dt
-        itTime = ti.readFloatData(ser, prefix='itime', lines=100)
-        print("Iteration time teensy: ", itTime)
-        if sumTime >= itTime:
-            sumTime -= itTime
-            Aab = ti.readFloatData(ser, prefix='c_s',lines= 100)
-            print("Control signal: ", Aab )
 
-        plotData(teensyData, timeData, sumTime, ser)
+    FSMplot.init(teensyData, cols=2)
+
+    iterationTime = 0
+    simulatedTime = 0
+    sumTime=0
+
+    for i in range(1, steps):
+        start = time.time()
+        #ser.flushInput()
+        #simulatedTime += dt
+
+        #itTime = ti.readFloatData(ser, prefix='itime', lines=100)
+        #print("Iteration time teensy: ", itTime)
+
+
+
+
+
+        #plotData(teensyData, timeData, simulatedTime, ser)
 
         # Recieve data from serial port
         Anew = Across + Aab
 
         # Update rocket with new data
+        # *Anew/Aold
         Rocket.setCd(Cd*Anew/Aold)
 
         # Calculate equations of motion
@@ -123,38 +142,71 @@ def main():
         linearVelocity.append(x[7])
         position.append(x[2])
         sensor.in_heigth(x[2])
+        # Acceleration
+        quaternion = x[3:7]
+        Rbody2Inertial = Kinematics.Rquaternion(quaternion)
+        accWorld = Rbody2Inertial @ dx[7:10].T
+        sensor.in_acceleration(np.linalg.norm(accWorld))
+        velWorld = Rbody2Inertial @ x[7:10].T
 
-        sensor.in_acceleration(np.linalg.norm(dx[7:10]))
+        #Sender data til Teensy
+        #ti.sendData(ser, [-x[2], -accWorld[2], iterationTime/i, x[7]])
+        Aab, estimated_h, estimated_v, error = airbrakes.airbrakes_main(-x[2], -accWorld[2], dt)#ti.readFloatData(ser, prefix='c_s',lines= 100)
+        est_h_str=str(estimated_h)
+        est_h_str=(est_h_str.replace('[','')).replace(']','')
+        estimated_h=float(est_h_str)
 
-        ti.sendHeightAndAcceleration(ser, -x[2], dx[7])
+        est_v_str=str(estimated_v)
+        est_v_str=(est_v_str.replace('[','')).replace(']','')
+        estimated_v=float(est_v_str)
+
+        est_e_str=str(error)
+        est_e_str=(est_e_str.replace('[','')).replace(']','')
+        error=float(est_e_str)
+
+        print("c_s: ", Aab )
+        print("height: ", -x[2] )
+        print("acc: ", -accWorld[2] )
+        print("est_h: ", estimated_h)
+        print("est_v: ", estimated_v)
+        print("vel: ", velWorld[2])
+        print("error_h: ", error )
+
+        #Values for ploting:
+        teensyData["t_h"][1].append(-x[2])
+        teensyData["t_az"][1].append(-accWorld[2])
+        teensyData["t_ax"][1].append(-accWorld[0])
+        teensyData["t_ay"][1].append(-accWorld[1])
+        #teensyData["est_h"][1].append(estimated_h)
+        #teensyData["est_v"][1].append(estimated_v)
+        teensyData["c_s"][1].append(Aab)
+        teensyData["vel"][1].append(-velWorld[2])
+        #teensyData["error_h"][1].append(error)
+        timeData.append(sumTime)
+        sumTime+=0.03
+
 
         Aabs = Aabs + [[Aab]]
         xs = xs + [[x[2]]]
-        dxs = dxs + [[np.linalg.norm(dx[7:10])]]
+        dxs = dxs + [[np.linalg.norm(accWorld)]]
+        iterationTime += time.time() - start
+    print("Average iteration time: ", iterationTime/steps)
     FSMplot.plotData(teensyData, timeData)
     plt.show()
+    plt.pause(60*30)
 
-    #plt.plot(t, Aabs[:len(t)])
-    #plt.plot(t, xs[:len(t)])
-    #plt.plot(t, dxs[:len(t)])
-    #plt.show()
+"""
     lookUpTable=[]
     hoydeN=0;
     hoyde=0;
     diff=0;
-    print(linearVelocity)
-    print(position)
     for i in range(len(position)):
        hoydeN=-int(np.floor(position[i]))
-       print("Hoyde: ", hoyde)
-       print("HoydeN: ", hoydeN)
        if hoydeN < hoyde:
-           print("continue")
            continue
        if hoydeN>hoyde:
            #var2=int(np.floor(position[:,2][i+1]))
            diff=hoydeN-hoyde
-           print("Diff: ", diff)
            if i==0:
                a=(linearVelocity[i])/diff
                for j in range(diff):
@@ -167,7 +219,7 @@ def main():
                    hoyde+=1
        lookUpTable.append(linearVelocity[i])
        hoyde+=1
-    print(lookUpTable)
+    print(lookUpTable)"""
 
 
 
