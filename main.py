@@ -38,7 +38,7 @@ launchRampLength = 5
 timeStep = 0.05
 simulationTime= 25
 
-tol = 10 # how close to targetApogee is acceptable
+tol = 1 # how close to targetApogee is acceptable
 targetApogee = 3000 # desired apogee
 Cbrakes = 0.1 # force coefficient on brakes (i.e. F_brakes = [-Cbrakes*airSpeed**2,0,0])
 trajectory = TrajectoryWithBrakes.calculateTrajectoryWithBrakes(rocket, initialInclination, launchRampLength,timeStep, simulationTime, tol, targetApogee, Cbrakes)
