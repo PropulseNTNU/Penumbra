@@ -2,7 +2,7 @@
 The definition of the CFD rocket
 
 Version: WIP
-Last edit: 17.11.2018
+Last edit: 13.03.2019
 
 --Propulse NTNU--
 """
@@ -23,7 +23,6 @@ plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 
 class RocketCFD:
-
     def __init__(self, *args):
         print('Initializing rocket..')
         self.__initMass = args[0]
@@ -56,7 +55,7 @@ class RocketCFD:
         self.__momentsArray_CG = args[8]
 
         print('\tInterpolating the drag force..')
-        self.__Dragforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__aeroForces[0], kind='cubic')
+        self.__Dragforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__aeroForces[0])
         print('\tInterpolating the lift force..')
         self.__Liftforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__aeroForces[1])
         print('\tInterpolating the moment about COM (component normal to aerodynamic plane)..')
@@ -71,7 +70,7 @@ class RocketCFD:
     def getMass(self, t):
         return self.__initMass + self.__motor.getMass(t) - self.__motor.getMass(0)
 
-    def getCOMx(self, t):
+    def getCOM(self, t):
         """
         :param t: [float] at time t [sec]
 
@@ -84,11 +83,9 @@ class RocketCFD:
         motorHeight = self.getMotor().getLength()
         initMotorMass = self.getMotor().getMass(0)
         motorMass = self.getMotor().getMass(t)
+        COM = 1/mass*(initMass*initCOM + (rocketLength - motorHeight/2)*(initMotorMass - motorMass))
 
-        return 1/mass*(initMass*initCOM + (rocketLength - motorHeight/2)*(initMotorMass - motorMass))
-
-    def getCOM(self,t):
-        return np.array([self.getCOMx(t), 0, 0])
+        return np.array([COM, 0, 0])
 
     def getLength(self):
         """
@@ -201,7 +198,7 @@ class RocketCFD:
             MOI = np.diagonal(self.getInertiaMatrix(time[i]))
             Ixx[i] = MOI[0]
             Iyy[i] = MOI[1]
-        # Izz = Iyy with principle axes, don't need to create another list for this
+        # Izz = Iyy with principle axes, don't need to create another array for this
         plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[kgcm²]')
         ax1.plot(time, Ixx*1e4, label='Ixx(t)', lw=2, c='r')  # Multiplied by 10,000 to get correct unit
@@ -249,11 +246,11 @@ class RocketCFD:
         return: A rocket instance with specs from initFile and CFD.
         """
         path = path_to_file + initFile
-        initMass = find_parameter(path, 'initial_mass')  # in grams
+        initMass = find_parameter(path, 'initial_mass')  # in kilo grams
         initMOI = find_parameter(path, 'initial_moi')
-        initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in g*mm^2
-        initCOM = find_parameter(path, 'initial_com') # in millimeters
-        length = find_parameter(path, 'length') # in millimeters
+        initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in kg*m^2
+        initCOM = find_parameter(path, 'initial_com') # in meters
+        length = find_parameter(path, 'length') # in meters
         motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
 
         path = path_to_file + sampleReport
@@ -264,12 +261,12 @@ class RocketCFD:
         alpha, air_speed, drag, lift, moment = unwrap_report1(path,
                                                               int(T), float(alpha_max), float(delta_v), float(v0))
 
-        return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed,
+        return RocketCFD(float(initMass), initMOI, float(initCOM), float(length), motor, air_speed,
                       alpha, drag, lift,
                       moment)
 
     @staticmethod
-    def from_file_with_AoAspeed(initFile, sampleReport, path_to_file=''):
+    def from_file_with_AoAspeed(initFile, forceReport, path_to_file=''):
         """
                 Create an instance of CFDrocket by reading some files
 
@@ -288,7 +285,7 @@ class RocketCFD:
                                                     'myRocket2/')
 
                 :param initFile: The file with content specified above
-                :param sampleReport: The CFD file with aero moments about COM.
+                :param forceReport: The CFD file with aero moments about COM.
                                     Add sampling period, alpha_max, delta_v, v0 values to bottom of sampleReport:
                                                     period = ..
                                                     alpha_max = ..
@@ -302,14 +299,14 @@ class RocketCFD:
                 """
         path = path_to_file + initFile
         # CAD files are using the units mentioned below
-        initMass = find_parameter(path, 'initial_mass')  # in grams
+        initMass = find_parameter(path, 'initial_mass')  # in kilo grams
         initMOI = find_parameter(path, 'initial_moi')
-        initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in g*mm^2
-        initCOM = find_parameter(path, 'initial_com')  # in millimeters
-        length = find_parameter(path, 'length')  # in millimeters
+        initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in kg*m^2
+        initCOM = find_parameter(path, 'initial_com')  #in meters
+        length = find_parameter(path, 'length')  #in meters
         motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
 
-        path = path_to_file + sampleReport
+        path = path_to_file + forceReport
         alpha, air_speed, aeroForces, moment = unwrap_report2(path)
 
-        return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed, alpha, aeroForces, moment)
+        return RocketCFD(float(initMass), initMOI, float(initCOM), float(length), motor, air_speed, alpha, aeroForces, moment)

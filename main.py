@@ -26,15 +26,18 @@ deg2rad = 1/rad2deg
 
 # Initialize a rocket
 # FOR ROCKET CLASS 1
-path = '../rockets/'
+path = 'rockets/'
 init_file = 'init_rocket.r'
 rocket = RocketSimple.from_file(init_file, path)
+rocket.setCOM(-0.633)
+rocket.setMass(820e-3)
+rocket.printSpecifications(0)
 
 # Specify initial conditions
-initialInclination = 0*deg2rad
+initialInclination = 3*deg2rad
 launchRampLength = 5
-timeStep = 0.03
-simulationTime = 30
+timeStep = 0.01
+simulationTime = 15
 trajectory = Trajectory.calculateTrajectory(rocket, initialInclination, 
                                             launchRampLength, 
                                             timeStep, simulationTime)
@@ -44,14 +47,15 @@ position = trajectory[1]
 orientation = trajectory[2]
 AoA = trajectory[3]
 linearVelocity = trajectory[4]
-angularVelocity = trajectory[5]
+acceleration = trajectory[5]
+angularVelocity = trajectory[6]
 
 #Forces (as len(t)x3 matrices, one row correspond to 1 instance in time )
-drag = trajectory[6]
-lift = trajectory[7]
-gravity = trajectory[8]
-thrust = trajectory[9]
-aero_coeff = trajectory[11]
+drag = trajectory[7]
+lift = trajectory[8]
+gravity = trajectory[9]
+thrust = trajectory[10]
+aero_coeff = trajectory[12]
 
 # Print trajectory statistics
 Trajectory.printTrajectoryStatistics(rocket, position, linearVelocity, t)
@@ -114,6 +118,21 @@ ax2.grid()
 plt.subplots_adjust(hspace=0.5)
 ax3 = plt.subplot(313, xlabel='time [s]', ylabel='v_z [m/s]')
 ax3.plot(t, -linearVelocity[:,2], lw=2, c='g')
+ax3.grid()
+
+# Linear Velocity
+plt.figure()
+ax1 = plt.subplot(311, ylabel='a_x [m/s^2]')
+ax1.plot(t, acceleration[:,0], lw=2, c='r')
+ax1.grid()
+ax1.set_title('Acceleration (world coords)')
+plt.subplots_adjust(hspace=0.5)
+ax2 = plt.subplot(312, ylabel='a_y [m/s^2]')
+ax2.plot(t, acceleration[:,1], lw=2, c='b')
+ax2.grid()
+plt.subplots_adjust(hspace=0.5)
+ax3 = plt.subplot(313, xlabel='time [s]', ylabel='a_z [m/s^2]')
+ax3.plot(t, -acceleration[:,2], lw=2, c='g')
 ax3.grid()
 
 # Angular velocity

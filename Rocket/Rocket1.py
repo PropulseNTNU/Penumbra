@@ -542,7 +542,7 @@ class Motor:
 
 class Payload:
     def __init__(self, width):
-        self.__mass = 4  # this mass is fixed for all rockets qualified for competition.
+        self.__mass = 0  # this mass is fixed for all rockets qualified for competition.
         self.__width = width
         print('Payload initialized!\n')
 
@@ -710,7 +710,7 @@ class RocketSimple:
         Xcom = self.__COM
         XcomMotor = self.__motorCOM
 
-        self.__COM = (M*Xcom - Mm*XcomMotor)/Ms
+        self.__rocketStructureCOM = (M*Xcom - Mm*XcomMotor)/Ms
 
     def getCOMofParts(self):
         return self.__COMofRocketStructure
