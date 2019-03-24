@@ -14,6 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from lib.File_utilities import find_parameter
+from scipy.integrate import simps
 
 # Define some things for plotting
 font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}
@@ -356,6 +357,10 @@ class Fin:
 
 class Motor:
     def __init__(self, *args):
+        verbose = True
+
+        kwargs = args[7]
+
         print("Initializing motor:")
         self.__name = args[0]
         self.__thrustMatrix = args[1]
@@ -370,6 +375,29 @@ class Motor:
         self.__totalImpulse = args[2]
         self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
         self.__burnTime = self.__timeArray[-1]
+
+        if "frequency" in kwargs and "standardDeviation" in kwargs:
+            if verbose: print("We were on a break!")
+            self.__freq = kwargs["frequency"]
+            if verbose: print("freq set")
+            self.__stdDev = kwargs["standardDeviation"]
+            if verbose: print("stdDev set")
+            samples = int(np.ceil(self.__burnTime*self.__freq))
+            if verbose: print("Number og samples set to {}".format(samples))
+            newThrust = np.zeros((samples + 1, 2))
+            if verbose: print("newThrust array filled with zeros, shape: {}".format(newThrust.shape))
+            for i in range(1, samples):
+                deviation = np.random.normal(scale = self.__stdDev)
+                while self.__thrustFunction(i/self.__freq) + deviation < 0:
+                    deviation = np.random.normal(scale = self.__stdDev)
+                newThrust[i] = np.array([i/self.__freq, self.__thrustFunction(i/self.__freq) + deviation])
+            newThrust[-1] = np.array([self.__burnTime, 0])
+            newThrust = newThrust.T
+            newThrust[1] = self.__totalImpulse * newThrust[1] / simps(newThrust[1], newThrust[0])
+            self.__timeArray = newThrust[0]
+            self.__thrustArray = newThrust[1]
+            self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='linear')
+
         self.__avgThrust = round(self.__totalImpulse/self.__burnTime, 4)
         dt = self.__burnTime/1e4  # This is usually in the order of 100 micro seconds (time step).
         timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
@@ -397,6 +425,9 @@ class Motor:
         return "Motor: " + name + "\n" + sep + "\nTotal impulse: " + I + " Ns\n" + "Average thrust: " + avg + " N" + \
                "\nMaximum thrust: " + str(Tmax) + " N,\tat time " + str(timeMax) + " s\n" + "Burntime: " + \
                str(bTime) + " s\n" + "Propellant mass: " + str(propMass) + " g\n" + "Frame mass: " + str(frameMass) + " g\n"
+
+    def getThrustCurve(self):
+        return np.array([self.__timeArray, self.__thrustArray])
 
     # Get functions
     def getName(self):
@@ -514,7 +545,7 @@ class Motor:
             plt.show()
 
     @staticmethod
-    def from_file(motorFile):
+    def from_file(motorFile, kwargs):
         """
             Read a file with motor specs.
             ASSUMPTIONS: -
@@ -538,7 +569,7 @@ class Motor:
                     f = eval(row[1])
                     thrust.append([t, f])
         thrust = np.array(thrust)
-        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass))
+        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass), kwargs)
 
 class Payload:
     def __init__(self, width):
@@ -820,7 +851,7 @@ class RocketSimple:
         print(dots)
 
     @staticmethod
-    def from_file(rocket_file, path_to_file=""):
+    def from_file(rocket_file, path_to_file="", **kwargs):
         """
         Creating an instance of a rocket by reading a rocket file that is located in a folder containing files for all
         necessary rocket parts.
@@ -856,7 +887,7 @@ class RocketSimple:
         nose = Nose.from_file(path + noseFile)
         body = Body.from_file(path + bodyFile)
         fin = Fin.from_file(path + finFile)
-        motor = Motor.from_file(path + motorFile)
+        motor = Motor.from_file(path + motorFile, kwargs)
         payload = Payload.from_file(path + payloadFile)
 
         return RocketSimple(nose, body, fin, eval(numberOfFins), motor, payload, partsPlacement)

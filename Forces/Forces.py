@@ -58,13 +58,13 @@ def Drag1(rocket, position, linearVelocityBody, AoA):
     #TODO Complete this function (Using updateCd_2 for now, probably better)
     return -k*speed*velocity
 
-def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility=True):
+def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility=True, deviation=0):
     """
-    Reference: 
+    Reference:
     -"Estimating the dynamic and aerodynamic paramters of
     passively controlled high power rockets for flight simulaton" by Simon B. .. Feb 2009
     -"OpenRocket techDoc, section 3.4.2"
-    
+
     "The comparison shows a good agreement between experimental and modelled data
     for vaules 0deg < AoA < 15deg, K=1" (page 12 in document)
 
@@ -83,7 +83,7 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
         rocket.setCd(0)
         return True
     # Temperature at altitude z (drops 6K per kilometer)
-    T = T0 - 6*position[2]/1000 
+    T = T0 - 6*position[2]/1000
     # Mach number at current state (speed of sound goes as sqrt(temperature))
     M = speed/c*np.sqrt(T0/T)
     Rcrit = 5e5
@@ -146,7 +146,7 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     # total zero AoA drag coefficient (eq 48)
     CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
     # FINAL CD
-    CD = CD_0 + Cd_bA + Cd_fA
+    CD = CD_0 + Cd_bA + Cd_fA + deviation
 
     # Compressibility:
     if enable_compressibility:

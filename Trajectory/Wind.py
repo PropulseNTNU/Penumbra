@@ -42,15 +42,15 @@ class engWind:
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
 
 class whiteWind(engWind):
-    def __init__(self, alt0, speed0, direction, timeDomain):
+    def __init__(self, alt0, speed0, direction, t):
         engWind.__init__(self, alt0, speed0, direction)
-        self.timeDomain = timeDomain
+        self.t = t
         self.freq = 20
-        t = np.linspace(0, timeDomain, self.freq * timeDomain)
+        timeDomain = np.linspace(0, t, self.freq * t)
         varience = np.array([np.random.normal(scale = 0.5)\
-        for t in t])
+        for timeDomain in timeDomain])
 
-        self.Uv = interp1d(t, varience)
+        self.Uv = interp1d(timeDomain, varience)
 
 
     def __str__(self):
@@ -59,34 +59,34 @@ class whiteWind(engWind):
         .format(self.alpha, self.alt0, self.speed0, self.direction)
         return outString
 
-    def getMagnitude(self, alt, t):
-        n = self.Uv(t)
+    def getMagnitude(self, alt, timeDomain):
+        n = self.Uv(timeDomain)
         if alt > 0:
             return self.speed0 * (alt / self.alt0) ** (1 / self.alpha) + n
         else:
             return 0
 
-    def getWindVector(self, alt, t):
-        mag = self.getMagnitude(alt, t)
+    def getWindVector(self, alt, timeDomain):
+        mag = self.getMagnitude(alt, timeDomain)
         direction = self.direction
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
 
 class pinkWind(whiteWind):
-    def __init__(self, alt0, speed0, direction, timeDomain):
+    def __init__(self, alt0, speed0, direction, t):
         alpha = 5/3
-        whiteWind.__init__(self, alt0, speed0, direction, timeDomain)
-        self.timeDomain = timeDomain
+        whiteWind.__init__(self, alt0, speed0, direction, t)
+        self.t = t
         self.freq = 20
-        t = np.linspace(0, timeDomain, self.freq * timeDomain)
+        timeDomain = np.linspace(0, t, self.freq * t)
 
-        n = int(np.ceil(self.freq*timeDomain))
+        n = int(np.ceil(self.freq*t))
         x = np.zeros(n)
         for i in range(2, n):
             a1 = (-alpha/2)
             a2 = (1 - alpha/2)*(a1 / 2)
             x[i] = np.random.normal() - a1 * x[i-1] - a2 * x[i - 2]
 
-        self.Uv = interp1d(t, x)
+        self.Uv = interp1d(timeDomain, x)
 
 
     def __str__(self):
