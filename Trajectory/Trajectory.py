@@ -22,7 +22,7 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, dragDeviation = 0, windObj = Wind.nullWind()):
+def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, dragDeviation = 0, windObj = Wind.nullWind(), trim = False):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
     # x is the state of the rocket
@@ -40,6 +40,14 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
     for i in range(len(t)):
         RotationBody2Inertial = Kinematics.Ryzx(euler[i][0], euler[i][1], euler[i][2])
         velocity[i] = RotationBody2Inertial @ linearVelocity[i]
+
+    if trim:
+        trimDomain = np.where(-position[:,2]>=0)
+        return t[trimDomain], position[trimDomain], euler[trimDomain],\
+        AoA[trimDomain], velocity[trimDomain], angularVelocity[trimDomain],\
+        drag[trimDomain], lift[trimDomain], gravity[trimDomain],\
+        thrust[trimDomain], windVelocities[trimDomain],\
+        aero_coeff[trimDomain]
 
     return t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity, thrust, windVelocities, aero_coeff
 

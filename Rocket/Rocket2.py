@@ -313,3 +313,20 @@ class RocketCFD:
         alpha, air_speed, aeroForces, moment = unwrap_report2(path)
 
         return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed, alpha, aeroForces, moment)
+
+    # CC, don't use
+    @staticmethod
+    def from_csv(initFile, sampleReport, path_to_file=''):
+        path = path_to_file + initFile
+        # CAD files are using the units mentioned below
+        initMass = find_parameter(path, 'initial_mass')  # in grams
+        initMOI = find_parameter(path, 'initial_moi')
+        initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in g*mm^2
+        initCOM = find_parameter(path, 'initial_com')  # in millimeters
+        length = find_parameter(path, 'length')  # in millimeters
+        motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
+
+        path = path_to_file + sampleReport
+        alpha, air_speed, aeroForces, moment = unwrap_report2(path)
+
+        return Rocket(float(initMass)/1e3, initMOI/1e9, float(initCOM)/1e3, float(length)/1e3, motor, air_speed, alpha, aeroForces, moment)

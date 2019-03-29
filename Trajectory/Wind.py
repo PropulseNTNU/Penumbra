@@ -42,7 +42,8 @@ class engWind:
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
 
 class whiteWind(engWind):
-    def __init__(self, alt0, speed0, direction, t):
+    def __init__(self, alt0, speed0, t, direction):
+        self.initParams = [alt0, speed0, t, direction]
         engWind.__init__(self, alt0, speed0, direction)
         self.t = t
         self.freq = 20
@@ -52,6 +53,8 @@ class whiteWind(engWind):
 
         self.Uv = interp1d(timeDomain, varience)
 
+    def refresh(self):
+        self.__init__(*self.initParams)
 
     def __str__(self):
         outString = "White wind\n" + "-"*16 +\
@@ -72,9 +75,10 @@ class whiteWind(engWind):
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
 
 class pinkWind(whiteWind):
-    def __init__(self, alt0, speed0, direction, t):
+    def __init__(self, alt0, speed0, t, direction = np.random.uniform(0, 2 * np.pi)):
+        self.initParams = [alt0, speed0, t, direction]
         alpha = 5/3
-        whiteWind.__init__(self, alt0, speed0, direction, t)
+        whiteWind.__init__(self, alt0, speed0, t, direction)
         self.t = t
         self.freq = 20
         timeDomain = np.linspace(0, t, self.freq * t)
@@ -87,7 +91,6 @@ class pinkWind(whiteWind):
             x[i] = np.random.normal() - a1 * x[i-1] - a2 * x[i - 2]
 
         self.Uv = interp1d(timeDomain, x)
-
 
     def __str__(self):
         outString = "Pink wind\n" + "-"*16 +\
