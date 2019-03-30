@@ -34,15 +34,17 @@ epsilon = 1e-10
 
 # Initialize a rocket
 # FOR ROCKET CLASS 1
-path1 = 'Tests/myRocket1/'
-init_file1 = 'myRocket.dot'
-Rocket = RocketSimple.from_file(init_file1, path1)
+path = 'rockets/'
+init_file = 'init_rocket.r'
+Rocket = RocketSimple.from_file(init_file, path)
+
+
 #Rocket.compressibleFlow(False)
 Cd = 0.5
 Across = np.pi*(Rocket.getBody().getDiameter()/2)**2
 
 # Specify initial conditions
-initialInclination = 20/180.0*np.pi
+initialInclination = 10/180.0*np.pi
 launchRampLength = 2.0*Rocket.getLength()
 dt = 0.03
 simulationTime= 30
@@ -113,10 +115,6 @@ def main():
 
         #itTime = ti.readFloatData(ser, prefix='itime', lines=100)
         #print("Iteration time teensy: ", itTime)
-
-
-
-
 
         #plotData(teensyData, timeData, simulatedTime, ser)
 

@@ -28,6 +28,7 @@ def airbrakes_main(height, acc, dt):
         u*=((math.pi)/180)
     return control.calculate_area(u), estimated_h, estimated_v, error
 
+"""
 def test_kalman():
     data = genfromtxt('data/flight1.csv', delimiter=',')
     estimates_h = []
@@ -53,3 +54,4 @@ def test_kalman():
 
 
 test_kalman()
+"""

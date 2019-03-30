@@ -3,8 +3,9 @@ import numpy as np
 #Initiates matrices needed in the kalman filter
 C_d=np.matrix([1,0])
 #const Matrix<2,2> E_d={0.00001,0.0000002,0.000000004,0.0000003};
-Q=np.matrix([[1000,0],[0,1]])
-R=[1];
+E_d = np.matrix([[0.01, 0], [0, 0.01]])
+Q=np.matrix([[90,0],[0,1000]])
+R=[1]
 I=np.matrix([[1,0],[0,1]])
 P_k_bar=np.matrix([[1,0],[0,0.1]])
 x_hat_bar=np.matrix([[91],[51.85]])#skal egentlig være ca.{2000,300};
@@ -33,7 +34,7 @@ def kalman(altitude, acceleration, dt):
   #Serial << "P_k: " << P_k << '\n';
   #//project ahead--------------------------------------------------------------
     x_hat_bar = A_d * x_hat + B_d * (acceleration)
-    P_k_bar = A_d * P_k * (A_d.T) + Q #//Mulig Q skal byttes ut med: E_d * Q * (~E_d); Uten pådrag blir det bare Q;
+    P_k_bar = A_d * P_k * (A_d.T) + E_d*Q*(E_d.T) #//Mulig Q skal byttes ut med: E_d * Q * (~E_d); Uten pådrag blir det bare Q;
   #Serial << "P_k_bar: " << P_k_bar << '\n';
   #Serial << "x_hat_bar: " << x_hat_bar << '\n';
     return x_hat[0][0], x_hat[1][0]
