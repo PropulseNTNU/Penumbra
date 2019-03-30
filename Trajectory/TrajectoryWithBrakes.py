@@ -41,7 +41,7 @@ def calculateTrajectoryWithBrakes(rocket, initialInclination, launchRampLength, 
 #    tol = 1
 #    targetApogee = 3000
 #    Cbrakes = 0.1
-    Tbrakes = 10 # guess start time
+    Tbrakes = 17 # guess start time
     deltaT = 1 # how much to change T each iteration 
     
     actualApogee = 0 

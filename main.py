@@ -35,12 +35,19 @@ rocket = RocketSimple.from_file(init_file, path)
 
 initialInclination = 10/180.0*np.pi
 launchRampLength = 5
-timeStep = 0.05
-simulationTime= 25
+timeStep = 0.03
+simulationTime= 30
 
-tol = 1 # how close to targetApogee is acceptable
-targetApogee = 3000 # desired apogee
-Cbrakes = 0.1 # force coefficient on brakes (i.e. F_brakes = [-Cbrakes*airSpeed**2,0,0])
+tol = 0.2  # how close to targetApogee is acceptable
+targetApogee = 3048 # desired apogee
+rho = 1.225 
+C_d = 1.28
+m = rocket.getMass(6.9)
+A_max = 0.006636
+C_Max = (1/(2))*rho*C_d*A_max
+Cbrakes = 0.4 * C_Max # force coefficient on brakes (i.e. F_brakes = [-Cbrakes*airSpeed**2,0,0])
+print("CBrakes: ", Cbrakes)
+
 trajectory = TrajectoryWithBrakes.calculateTrajectoryWithBrakes(rocket, initialInclination, launchRampLength,timeStep, simulationTime, tol, targetApogee, Cbrakes)
 
 #initialInclination = 0*deg2rad
@@ -54,8 +61,41 @@ t = trajectory[0]
 position = trajectory[1]
 orientation = trajectory[2]
 AoA = trajectory[3]
-linearVelocity = trajectory[4]
+linearVelocity = trajectory[4] #for some reason this is velocity in world frame?
 angularVelocity = trajectory[5]
+
+lookUpTable=[]
+hoydeN=0
+hoyde=0
+diff=0
+
+for i in range(len(position[:,2])):
+   hoydeN=-int(np.floor(position[:,2][i]))
+   print("Hoyde: ", hoyde)
+   print("HoydeN: ", hoydeN)
+   if hoydeN < hoyde:
+       continue
+   if hoydeN>hoyde:
+       #var2=int(np.floor(position[:,2][i+1]))
+       diff=hoydeN-hoyde
+       print("Diff: ", diff)
+       if i==0:
+           a=(-linearVelocity[:,2][i])/diff
+           for j in range(diff):
+               lookUpTable.append(a*j)
+               print("added: ", a*j)
+               hoyde+=1
+       else:
+           a=(-linearVelocity[:,2][i]-(-linearVelocity[:,2][i-1]))/diff
+           for j in range(diff):
+               lookUpTable.append(a*j+lookUpTable[hoyde-j-1])
+               print("added: ", a*j + lookUpTable[hoyde -j -1])
+               hoyde+=1
+   lookUpTable.append(-linearVelocity[:,2][i])
+   print("Added: ", -linearVelocity[:,2][i])
+   hoyde+=1
+print(len(lookUpTable))
+print(lookUpTable)
 
 #Forces (as len(t)x3 matrices, one row correspond to 1 instance in time )
 drag = trajectory[6]
