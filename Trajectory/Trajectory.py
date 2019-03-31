@@ -26,7 +26,7 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
     # x is the state of the rocket
     # x = [position, quaternion, linear velocity, angular velocity]
     (x0, initialDirection) = initialState(rocket, initialInclination)
-    t, x, AoA, forces, acc, windVelocities, aero_coeff = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation)
+    t, x, AoA, forces, acc, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
     n = len(t)
     drag = np.array([forces[i][:,0] for i in range(n)])
@@ -47,9 +47,8 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
         AoA[trimDomain], velocity[trimDomain], angularVelocity[trimDomain],\
         drag[trimDomain], lift[trimDomain], gravity[trimDomain],\
         thrust[trimDomain], windVelocities[trimDomain],\
-        aero_coeff[trimDomain]
 
-    return t, position, euler, AoA, velocity, acceleration, angularVelocity, drag, lift, gravity, thrust, windVelocities, aero_coeff
+    return t, position, euler, AoA, velocity, acceleration, angularVelocity, drag, lift, gravity, thrust, windVelocities
 
 def initialState(rocket, initialInclination):
     # Initial inclination of rocket
@@ -70,8 +69,8 @@ def initialState(rocket, initialInclination):
 
 def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation):
     t = np.arange(0, simulationTime + timeStep, timeStep)
-    sol, AoA, force, acc, windVelocities, aero_coeff = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj, dragDeviation))
-    return t, sol, AoA, force, acc, windVelocities, aero_coeff
+    sol, AoA, force, acc, windVelocities = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj, dragDeviation))
+    return t, sol, AoA, force, acc, windVelocities
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, dragDeviation):
     """
@@ -85,7 +84,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     AoA: Angle of attack in radians [float]
     forceMatrix: [3x4 matrix] A collection of the forces (one force vector for each column)
 
-    return: dx, AoA, forceMatrix, wind_velocity, aero_coeff
+    return: dx, AoA, forceMatrix, wind_velocity
     """
     windVelocity = windObj.getWindVector(-x[2], t)
     position = x[0:3]
@@ -113,14 +112,14 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     # definition of angle of attack
     AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
     # unit vector that points in drag direction (body coords.)
-    dirDragBody = RotationInertial2Body @ (-dirWindVelocity.T)
+    dirDragBody = RotationInertial2Body @ (-dirWindVelocity)
     projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
     # Forces in body coords
-    aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
-    drag = RotationInertial2Body @ aeroForces[0]
+    aeroForces = rocket.getAeroForces(position, airVelocity, AoA)
+    drag = aeroForces[0]*dirDragBody
     lift = aeroForces[1]*dirLiftBody
     thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
     gravityBody = RotationInertial2Body @ gravityWorld
@@ -136,14 +135,13 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     # obtain generalized forces seen from origin of body frame
     totalForce = thrust + gravityBody + drag + lift
     forceMatrix = np.array([drag, lift, gravityBody, thrust]).T
-    aero_coeff = np.array([rocket.getCd(), rocket.getCn(AoA)])
     # If rocket is on launch ramp, don't allow it to rotate, only accelerate (fixed to ramp)
     if stillAtLaunchRamp:
         totalForce = np.array([totalForce[0], 0, 0])
         totalMoment = np.array([0, 0, 0])
     else:
         # After launch ramp, allow it to rotate (now calculating torques about COM)
-        armAero = rocket.getCOP(AoA) - rocket.getCOM(t)
+        armAero = rocket.getCOP(position, airVelocity, AoA) - rocket.getCOM(t)
         totalMoment = np.cross(armAero, drag + lift)
     genForceBody = H.T @ np.concatenate((totalForce, totalMoment))
     # find dx
@@ -152,7 +150,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     dGeneralizedVelocity = np.linalg.solve(IBody, rhs)
     dx = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
 
-    return dx, AoA, forceMatrix, windVelocity, aero_coeff
+    return dx, AoA, forceMatrix, windVelocity
 
 # Solving simultaneous diff. equations
 def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
@@ -173,7 +171,6 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     stateMatrix = np.zeros((len(timelist), len(w0)))
     forceMatrix = np.zeros((len(timelist), 3, 4))
     accelerationMatrix = np.zeros((len(timelist), 3))
-    aero_coeffMatrix = np.zeros((len(timelist), 2))
     aoa = np.zeros(len(timelist))
     windVelocities = np.zeros((len(timelist), 3))
 
@@ -190,7 +187,7 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
     # Runge-Kutta algorithm
     for i in range(1, steps):
         t = timelist[i]
-        s1, AoA, force, windVelocity, aero_coeff = g(w, t)
+        s1, AoA, force, windVelocity = g(w, t)
         s2 = g(w + dt/2*s1, t + dt/2)[0] # get dx only
         s3 = g(w + dt/2*s2, t + dt/2)[0] # get dx only
         s4 = g(w + dt*s3, t + dt)[0] # get dx only
@@ -200,12 +197,11 @@ def RK4(RHS, tmin, tmax, dt, w0, RHS_args=0):
         stateMatrix[i] = w  # store new state
         forceMatrix[i] = force  # store forces
         accelerationMatrix[i] = dx[7:10]
-        aero_coeffMatrix[i] = aero_coeff # store aero-coefficients
         aoa[i] = AoA  # store AoA
         windVelocities[i] = windVelocity  # Store wind velocities
 
     # Return state, AoA and forces at every instance (np.arrays)
-    return stateMatrix, aoa, forceMatrix, accelerationMatrix, windVelocities, aero_coeffMatrix
+    return stateMatrix, aoa, forceMatrix, accelerationMatrix, windVelocities
 
 def unwrapState(x):
     """

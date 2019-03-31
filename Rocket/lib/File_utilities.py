@@ -51,15 +51,17 @@ def unwrap_report1(file, T, alpha_max, delta_v, v0):
 def unwrap_CFD_report(file):
     """
     Reads CFD file with CFD values (drag, lift or moment about COM) 
-        *** Assuming 1 airspeed per column, and 1 AoA per row
+        *** Assuming 1 airspeed per row, and 1 AoA per column
         *** Assuming that there are only floats in the file.
 
     :param file: The CFD file [File]
     :return: CFD_data [2D array] 
     """
-    CFD = loadtxt(file, skiprows=1, dtype=float)
+    CFD = loadtxt(file, dtype=float).T
+    speed = CFD[:,0][1:]
+    AoA = CFD[0][1:]
 
-    return CFD
+    return CFD[1:, 1:], speed, AoA
 
 
 def unwrap_openRocket(file):

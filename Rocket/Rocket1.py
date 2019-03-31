@@ -6,7 +6,7 @@ Last edit: 04.02.2019
 
 --Propulse NTNU--
 """
-verbose = False
+verbose = True
 
 import sys
 sys.path.append('../Forces/')
@@ -547,7 +547,7 @@ class Motor:
         self.__init__(*self.__argsMemory, frequency = self.__freq, deviation = self.__stdDev)
 
     @staticmethod
-    def from_file(motorFile, kwargs):
+    def from_file(motorFile, *kwargs):
         """
             Read a file with motor specs.
             ASSUMPTIONS: -
@@ -571,11 +571,11 @@ class Motor:
                     f = eval(row[1])
                     thrust.append([t, f])
         thrust = np.array(thrust)
-        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass), kwargs)
+        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass), *kwargs)
 
 class Payload:
     def __init__(self, width):
-        self.__mass = 170e-3  # this mass is fixed for all rockets qualified for competition.
+        self.__mass = 4000e-3  # this mass is fixed for all rockets qualified for competition.
         self.__width = width
         if verbose: print('Payload initialized!\n')
 
@@ -680,7 +680,7 @@ class RocketSimple:
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
         # DRAG COEFFICIENT (at some arbitrary speed, 150 m/s)
-        Forces.updateCd(self, [0, 0, 0], [150, 0, 0], 0)
+        Forces.updateCd(self, [0, 0, 0], [0, 0, 0], 0)
         if verbose: print("Rocket initialized!\n")
         if verbose: self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
 
@@ -747,7 +747,7 @@ class RocketSimple:
         return self.__COMofRocketStructure
 
     # Aerodynamics
-    def getCOP(self, AoA):
+    def getCOP(self, position, velocity, AoA):
         """
         :param AoA: [float] the angle of attack [rad]
 
@@ -761,9 +761,9 @@ class RocketSimple:
         COP0 = (CNnose*self.__Xcp_nose + CNbody*AoA*self.__Xcp_body + CNfin*self.__Xcp_fin)/CNrocket
         return np.array([COP0, 0, 0])
 
-    def getStabilityMargin(self, AoA, t=0):
+    def getStabilityMargin(self, position, velocity, AoA, t=0):
         COM = self.getCOM(t)[0]
-        COP = self.getCOP(AoA)[0]
+        COP = self.getCOP(position, velocity, AoA)[0]
         return COM - COP
 
     def compressibleFlow(self, state):
@@ -776,7 +776,7 @@ class RocketSimple:
     def getCompressibilityState(self):
         return self.__compressibility
 
-    def getAeroForces(self, AoA, position, velocity):
+    def getAeroForces(self, position, velocity, AoA):
         """
         :param velocity: [np.array] velocity of rocket (with wind) relative to world [m/s]
         :param AoA: [float] the angle of attack [rad]
@@ -818,7 +818,7 @@ class RocketSimple:
         Mass = self.getMass(t)
         motorCOM = self.__motorCOM + self.getMotor().getCOM(t) - self.getMotor().getCOM(0)
         COM = self.getCOM(t)[0]
-        COP = self.getCOP(AoA)[0]
+        COP = self.getCOP([0, 0, 0], [0, 0, 0], AoA)[0]
         stability_margin = (COM - COP)/self.getBody().getDiameter()
         MOI = self.getInertiaMatrix(t)
         Cd = self.getCd()

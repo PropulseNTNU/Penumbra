@@ -9,7 +9,6 @@ Last edit: 13.03.2019
 import sys
 sys.path.append('../Forces/')
 import Forces as Forces
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
@@ -41,18 +40,20 @@ class RocketCFD:
         self.__drag = args[5]
         self.__lift = args[6]
         self.__moment = args[7]
-        self.__freeAirStreamSpeeds = np.linspace(0, 1, len(self.__drag[0]))
-        self.__AoAarray = np.linspace(-10*np.pi/180, 10*np.pi/180, len(self.__drag[:,0]))
+        self.__freeAirStreamSpeeds = args[8]
+        self.__AoAarray = args[9]
 
-        # Create rotation matrix for all AoA
-        def rotationMatrix(AoA):
-            sa, ca = np.sin(AoA*np.pi/180.0), np.cos(AoA*np.pi/180.0)
-            return np.array([[ca, sa],[-sa, ca]])
-
-        # Initialize aeroforces (a 2xn matrix with drag as row 1 and lift as row 2)
-        for i in range(len(self.__AoAarray)):
-            rotMat = rotationMatrix(self.__AoAarray[i])
-            self.__aeroForces[:,i] = rotMat@self.__aeroForces[:,i]
+# =============================================================================
+#         # Create rotation matrix for all AoA
+#         def rotationMatrix(AoA):
+#             sa, ca = np.sin(AoA*np.pi/180.0), np.cos(AoA*np.pi/180.0)
+#             return np.array([[ca, sa],[-sa, ca]])
+# 
+#         # Initialize aeroforces (a 2xn matrix with drag as row 1 and lift as row 2)
+#         for i in range(len(self.__AoAarray)):
+#             rotMat = rotationMatrix(self.__AoAarray[i])
+#             self.__aeroForces[:,i] = rotMat@self.__aeroForces[:,i]
+# =============================================================================
 
         print('\tInterpolating the drag force..')
         self.__Dragforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__drag)
@@ -93,21 +94,22 @@ class RocketCFD:
         return self.__length
 
     # Aero dynamics
-    def getAeroForces(self, AoA, position, speed):
+    def getAeroForces(self, position, velocity, AoA):
         """
-        :param speed: [float] the air speed relative to rocket [m/s]
+        :param velocity: [np.array] the air velocity relative to rocket [m/s]
         :param position: [np.array] The position vector in world coordinates
         :param AoA: [float] the angle of attack [rad]
 
         :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
         z = abs(position[2])  # Vertical position of rocket
+        speed = np.linalg.norm(velocity)
         density_reduction = np.exp(-z/Forces.h)  # Account for decreasing air density
-        drag = self.__Dragforce(AoA, speed)
-        lift = self.__Liftforce(AoA, speed)
+        drag = self.__Dragforce(AoA, speed/Forces.c)
+        lift = self.__Liftforce(AoA, speed/Forces.c)
         return np.array([drag, lift])*density_reduction
 
-    def getMomentAboutCOM(self, AoA, position, speed):
+    def getMomentAboutCOM(self, position, velocity, AoA):
         """
         :param speed: [float] the air speed relative to rocket [m/s]
         :param position: [np.array] The position vector in world coordinates
@@ -116,21 +118,21 @@ class RocketCFD:
         :return: [float] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
         """
         z = abs(position[2])  # Vertical position of rocket
+        speed = np.linalg.norm(velocity)
         density_reduction = np.exp(-z/Forces.h)  # Account for decreasing air density
         return self.__MomentAboutCOM(AoA, speed)*density_reduction
 
-    def getCOP(self, AoA):
+    def getCOP(self, position, velocity, AoA):
         """
         :param position: [np.array] The position vector in world coordinates
         :param AoA: [float] the angle of attack [rad]
 
         :return: [float] The position of COP relative to nose tip [m]
         """
-        speed = 240  # TODO check if COP is speed dependent
-        F = self.getAeroForces(AoA, speed)
+        F = self.getAeroForces(position, velocity, AoA)
         Fd = F[0]
         Fl = F[1]
-        M = self.getMomentAboutCOM(AoA, speed)
+        M = self.getMomentAboutCOM(position, velocity, AoA)
         COM_0 = self.getCOM(0)
         COPx = COM_0[0] - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
         COPx = COPx[0]
@@ -138,10 +140,10 @@ class RocketCFD:
 
     def getAeroData(self):
         return self.__AoAarray, self.__freeAirStreamSpeeds, self.__drag, self.__lift, self.__moment
-
-    def getStabilityMargin(self, AoA, speed, t=0):
+    
+    def getStabilityMargin(self, position, velocity, AoA, t=0):
         COM = self.getCOM(t)
-        COP = self.getCOP(AoA, speed)
+        COP = self.getCOP(position, velocity, AoA)
         return COM - COP
 
     def compressibleFlow(self, state):
@@ -165,7 +167,7 @@ class RocketCFD:
         I0 = self.__initInertiaMatrix
         rInitMass = self.__initMass
         rInitCOMx = self.__initCOM
-        rCOMx = self.getCOMx(t)
+        rCOMx = self.getCOM(t)[0]
         mInitMass = self.__motor.getMass(0)
         mInitCOMx = self.__motor.getCOM(0)[0]
         mInitInertia = self.__motor.getInertiaMatrix(0)
@@ -310,8 +312,8 @@ class RocketCFD:
         path2 = path_to_file + lift_report
         path3 = path_to_file + moment_report
 
-        drag = unwrap_CFD_report(path1)
-        lift = unwrap_CFD_report(path2)
-        moment = unwrap_CFD_report(path3)
+        drag, speed, AoA = unwrap_CFD_report(path1)
+        lift = unwrap_CFD_report(path2)[0]
+        moment = unwrap_CFD_report(path3)[0]
 
-        return RocketCFD(float(initMass), initMOI, float(initCOM), float(length), motor, drag, lift, moment)
+        return RocketCFD(float(initMass), initMOI, float(initCOM), float(length), motor, drag, lift, moment, speed, AoA)

@@ -3,10 +3,10 @@ Mass properties of Propulse Rocket Sim v.3
      Coordinate system: -- default --
 
 Initial mass of rocket: ( grams )
-initial_mass = 27283
+initial_mass = 27283e-3
 
 Center of mass: ( millimeters )
-initial_com = -1438
+initial_com = -1438e-3
 
 Length of rocket: ( millimeters )
 length = 2.50e3

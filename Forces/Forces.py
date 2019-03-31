@@ -53,16 +53,15 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
     Ltot = Lb + Ln
     D = rocket.getBody().getDiameter()
     R = speed*Ltot/nu  # Reynold's number (Kinematic viscosity)
+    B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cfb = 0
-    # Conditions for different Reynold's number
-    if R < 1e4:
-        Cfb = 1.48e-2
-    elif 1e4 < R < Rcrit:
-        Cfb = 1/(1.5*np.log(R)-5.6)**2
-    else:
-        Cfb = 0.032*(100e-6/D)**0.2
+    # Conditions for different R
+    if 0 < R <= Rcrit:
+        Cfb = 1.328/(R**0.5)
+    elif R > Rcrit:
+        Cfb = 0.074/(R**0.2) - B/R
     # Body drag contrib. (assuming no boat tail) (eq 41)
-    Cd_fb = (1 + 60/(Ltot/D)**3 + (2.5e-3)*Lb/D)*(2.7*Ln/D + 4*Lb/D)*Cfb*0.1
+    Cd_fb = (1 + 60/(Ltot/D)**3 + (2.5e-3)*Lb/D)*(2.7*Ln/D + 4*Lb/D)*Cfb
     # Base drag contrib. (due to boundary layer seperation, low pressure region)
     if Cd_fb != 0:
         Cd_b = 0.029/np.sqrt(Cd_fb)
@@ -84,7 +83,7 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
     elif 1e4 < R < Rcrit:
         Cff = 1/(1.5*np.log(R)-5.6)**2
     else:
-        Cff = 0.032*(100e-6/D)**0.2
+        Cff = 0.032*(0.05e-6/D)**0.2
     # Drag contrib. (43)
     Cd_f = Cff*((1 + D/(2*Ltot))*Abe + (1 + 2*Tf/Lm)*Afe)/(np.pi*D**2)
     #Cd_f = 2*Cff*(1 + 2*Tf/Lm)*4*N*Afp/(np.pi*D**2)
@@ -110,10 +109,10 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
 
     # Compressibility:
     if enable_compressibility:
-        if M < 0.90:
+        if M < 0.80:
             CD /= np.sqrt(1 - M**2)
-        elif 0.90 <= M < 1.1:
-            CD /= np.sqrt(1 - (0.90)**2)
+        elif 0.80 <= M < 1.1:
+            CD /= np.sqrt(1 - (0.80)**2)
         else:
             CD /= np.sqrt(M**2 - 1)
 
@@ -133,8 +132,9 @@ def SAMdrag(rocket, position, linearVelocityWorld):
     Cd = rocket.getCd()
     Aref = np.pi*(rocket.getBody().getDiameter()/2)**2
     k = 1/2*rho0*Aref*Cd*np.exp(-z/h)
+    speed = np.linalg.norm(linearVelocityWorld)
 
-    return -k*np.linalg.norm(linearVelocityWorld)*linearVelocityWorld
+    return k*speed**2
 
 def SAMlift(rocket, position, linearVelocityWorld, AoA):
     """
