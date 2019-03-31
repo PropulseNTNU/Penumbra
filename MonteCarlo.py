@@ -164,6 +164,7 @@ class MonteCarlo:
 
 test = MonteCarlo.fromFile("190327225234737225")
 #test.flush()
+test.run()
 test.pangea()
 
 # Output

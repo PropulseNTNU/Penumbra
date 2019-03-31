@@ -21,8 +21,14 @@ class engWind:
     def __init__(self, alt0, speed0, direction):
         self.alpha = 1 / 0.143
         self.alt0 = alt0
-        self.speed0 = speed0
-        self.direction = direction
+        if type(speed0) == list:
+            self.speed0 = np.random.uniform(speed0[0], speed0[1])
+        else:
+            self.speed0 = speed0
+        if type(speed0) == list:
+            self.direction = np.random.uniform(direction[0], direction[1])
+        else:
+            self.direction = direction
 
     def __str__(self):
         outString = "Engineering wind\n" + "-"*16 +\
