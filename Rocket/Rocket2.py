@@ -14,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 from Rocket1 import Motor
-from lib.File_utilities import find_parameter, unwrap_report1, unwrap_CFD_report
+from lib.File_utilities import find_parameter, unwrap_CFD_report
 
 # Define some things for plotting
 font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}

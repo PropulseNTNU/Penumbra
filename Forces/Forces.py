@@ -18,13 +18,13 @@ nu = 1.511e-5  # Kinematic viscosity of air [m^2/s]
 c = 343  # Speed of sound (at 293K) [m/s]
 
 # Forces
-def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=True):
+def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=True, deviation=0):
     """
-    Reference: 
+    Reference:
     -"Estimating the dynamic and aerodynamic paramters of
     passively controlled high power rockets for flight simulaton" by Simon B. .. Feb 2009
     -"OpenRocket techDoc, section 3.4.2"
-    
+
     "The comparison shows a good agreement between experimental and modelled data
     for vaules 0deg < AoA < 15deg, K=1" (page 12 in document)
 
@@ -43,7 +43,7 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
         rocket.setCd(0)
         return True
     # Temperature at altitude z (drops 6K per kilometer)
-    T = T0 - 6*position[2]/1000 
+    T = T0 - 6*position[2]/1000
     # Mach number at current state (speed of sound goes as sqrt(temperature))
     M = speed/c*np.sqrt(T0/T)
     Rcrit = 5e5
@@ -106,7 +106,7 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
     # total zero AoA drag coefficient (eq 48)
     CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
     # FINAL CD
-    CD = CD_0 + Cd_bA + Cd_fA
+    CD = CD_0 + Cd_bA + Cd_fA + deviation
 
     # Compressibility:
     if enable_compressibility:

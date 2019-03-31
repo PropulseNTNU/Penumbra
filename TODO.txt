@@ -1,8 +1,0 @@
-Rocket to do list:
-
-Pitch dampening
-No roll dynamics? 
-Body pressure drag 
-Fin pressure drag 
-Base drag (FIX THIS)
-Parasitic drag

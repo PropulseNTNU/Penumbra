@@ -6,14 +6,16 @@ Last edit: 04.02.2019
 
 --Propulse NTNU--
 """
+verbose = False
+
 import sys
 sys.path.append('../Forces/')
 import Forces as Forces
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from lib.File_utilities import find_parameter
+from scipy.integrate import simps
 
 # Define some things for plotting
 font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}
@@ -38,7 +40,7 @@ class Nose:
             self.__length = self.__diameter/2
             self.__thickness = args[1]
             self.__density = args[2]
-        print("Nose initialized!\n")
+        if verbose: print("Nose initialized!\n")
 
     def __str__(self):
         D = str(self.__diameter)
@@ -205,7 +207,7 @@ class Body:
         self.__length = length
         self.__density = density
         self.__thickness = thickness
-        print("Body initialized!\n")
+        if verbose: print("Body initialized!\n")
 
     def __str__(self):
         D = str(self.__diameter)
@@ -280,7 +282,7 @@ class Fin:
         self.__midChord = np.sqrt(sc**2 + (sc/np.tan(a) + 1/2*(tc - rc))**2)
         self.__thickness = args[4]
         self.__density = args[5]
-        print("Fin initialized!\n")
+        if verbose: print("Fin initialized!\n")
 
     def __str__(self):
         Chord = str(self.__semiChord)
@@ -355,8 +357,9 @@ class Fin:
         return Fin(eval(semiChord), eval(rootChord), eval(tipChord), eval(angle), eval(thickness), eval(density))
 
 class Motor:
-    def __init__(self, *args):
-        print("Initializing motor:")
+    def __init__(self, *args, frequency=0, deviation=0):
+        self.__argsMemory = args
+        if verbose: print("Initializing motor:")
         self.__name = args[0]
         self.__thrustMatrix = args[1]
         self.__timeArray = self.__thrustMatrix[:, 0]  # Assuming time values along 1st column
@@ -365,11 +368,31 @@ class Motor:
         self.__length = args[4]
         self.__initialPropellantMass = args[5]
         self.__frameMass = args[6]
-        print("\tInterpolating thrust data...")
+        if verbose: print("\tInterpolating thrust data...")
         self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='linear')  # Linear Interpolation for thrust curve
         self.__totalImpulse = args[2]
         self.__exhaustSpeed = self.__totalImpulse/self.__initialPropellantMass
         self.__burnTime = self.__timeArray[-1]
+
+        self.__freq = frequency
+        self.__stdDev = deviation
+
+        if self.__freq != 0 and self.__stdDev != 0:
+            if verbose: print("We were on a break!")
+            samples = int(np.ceil(self.__burnTime*self.__freq))
+            newThrust = np.zeros((samples + 1, 2))
+            for i in range(1, samples):
+                deviation = np.random.normal(scale = self.__stdDev)
+                while self.__thrustFunction(i/self.__freq) + deviation < 0:
+                    deviation = np.random.normal(scale = self.__stdDev)
+                newThrust[i] = np.array([i/self.__freq, self.__thrustFunction(i/self.__freq) + deviation])
+            newThrust[-1] = np.array([self.__burnTime, 0])
+            newThrust = newThrust.T
+            newThrust[1] = self.__totalImpulse * newThrust[1] / simps(newThrust[1], newThrust[0])
+            self.__timeArray = newThrust[0]
+            self.__thrustArray = newThrust[1]
+            self.__thrustFunction = interp1d(self.__timeArray, self.__thrustArray, kind='linear')
+
         self.__avgThrust = round(self.__totalImpulse/self.__burnTime, 4)
         dt = self.__burnTime/1e4  # This is usually in the order of 100 micro seconds (time step).
         timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
@@ -378,12 +401,12 @@ class Motor:
         massFlow = self.__thrustFunction(timeList)/self.__exhaustSpeed
         self.__propellantMassList = np.zeros(iterations)
         self.__propellantMassList[0] = propellantMass
-        print("\tCalculating mass loss over the burn time of %1.2f s..." % self.__burnTime)
+        if verbose: print("\tCalculating mass loss over the burn time of %1.2f s..." % self.__burnTime)
         for i in range(iterations - 1):
             propellantMass -= dt/2*(massFlow[i] + massFlow[i + 1])  # Trapezoid rule for integration of mdot over time
             self.__propellantMassList[i + 1] = propellantMass
         self.__propellantMassFunction = interp1d(timeList, self.__propellantMassList)
-        print("Motor %s initialized!\n" % self.__name)
+        if verbose: print("Motor %s initialized!\n" % self.__name)
 
     def __str__(self):
         I = str(round(self.__totalImpulse, 2))
@@ -397,6 +420,9 @@ class Motor:
         return "Motor: " + name + "\n" + sep + "\nTotal impulse: " + I + " Ns\n" + "Average thrust: " + avg + " N" + \
                "\nMaximum thrust: " + str(Tmax) + " N,\tat time " + str(timeMax) + " s\n" + "Burntime: " + \
                str(bTime) + " s\n" + "Propellant mass: " + str(propMass) + " g\n" + "Frame mass: " + str(frameMass) + " g\n"
+
+    def getThrustCurve(self):
+        return np.array([self.__timeArray, self.__thrustArray])
 
     # Get functions
     def getName(self):
@@ -513,8 +539,15 @@ class Motor:
         if show:
             plt.show()
 
+    def setStochasticParams(self, freq, stdDev):
+        self.__freq = freq
+        self.__stdDev = stdDev
+
+    def refresh(self):
+        self.__init__(*self.__argsMemory, frequency = self.__freq, deviation = self.__stdDev)
+
     @staticmethod
-    def from_file(motorFile):
+    def from_file(motorFile, kwargs):
         """
             Read a file with motor specs.
             ASSUMPTIONS: -
@@ -538,13 +571,13 @@ class Motor:
                     f = eval(row[1])
                     thrust.append([t, f])
         thrust = np.array(thrust)
-        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass))
+        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass), kwargs)
 
 class Payload:
     def __init__(self, width):
         self.__mass = 170e-3  # this mass is fixed for all rockets qualified for competition.
         self.__width = width
-        print('Payload initialized!\n')
+        if verbose: print('Payload initialized!\n')
 
     def getMass(self):
         return self.__mass
@@ -567,7 +600,7 @@ class Payload:
 
 class RocketSimple:
     def __init__(self, nose, body, fin, numberOfFins, motor, payload, partsPlacement):
-        print("Initalizing rocket:")
+        if verbose: print("Initalizing rocket:")
         self.__partsPlacement = partsPlacement
         self.__rocketStructure = np.array([nose, payload, body, fin])
         self.__rocketMotor = motor
@@ -575,7 +608,7 @@ class RocketSimple:
         self.__N = numberOfFins  # Number of fins on rocket
         self.__massOfRocketStructure = np.array([part.getMass() for part in self.__rocketStructure])
         self.__massOfRocketStructure[3] = self.__N*self.__massOfRocketStructure[3]  # There are N fins
-        print("\tCalculating rocket mass..")
+        if verbose: print("\tCalculating rocket mass..")
         # TODO Account for electronics/recovery etc.
         self.__rocketMass = self.__massOfRocketStructure.sum()
         self.__motorMass = self.__rocketMotor.getMass(0)
@@ -583,7 +616,7 @@ class RocketSimple:
         self.__mass = self.__rocketMass + self.__motorMass
 
         # COM
-        print("\tCalculating rocket COM (relative to rocket origin)..")
+        if verbose: print("\tCalculating rocket COM (relative to rocket origin)..")
         self.__noseCOM = nose.getCOM()[0] - nose.getLength()
         self.__bodyCOM = body.getCOM()[0] - nose.getLength()
         # Assuming placement of fin is position of bottom edge relative to body top
@@ -624,14 +657,12 @@ class RocketSimple:
         TC = fin.getTipChord()
         theta = fin.getTopEdgeAngle()*np.pi/180.0 # TopEdgeAngle is in degrees
         y = SC*(2*TC + RC)/(3*(TC + RC))
-        Lf = np.sqrt(SC**2 + (SC/np.tan(theta) + 1/2*(TC - RC))**2)
         self.__CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*MC/(RC + TC))**2)))
         Xb = partsPlacement[0] - nose.getLength() + RC  # Position of leading edge of fin on the body (relative to nose tip)
-        Xr = -SC/np.tan(theta)
         Xf = Xb - MC/3*(RC + 2*TC)/(RC + TC) - 1/6*((RC + TC) - RC*TC/(RC + TC))
         self.__Xcp_fin = Xf
 
-        print("\tCalculating inertia matrix of rocket..")
+        if verbose: print("\tCalculating inertia matrix of rocket..")
         # MOMENT OF INERTIA (about rocket axes with origin at COM, calculated with parallel axis thm)
         noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*nose.getLength()**2
         bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*nose.getLength()**2
@@ -648,10 +679,10 @@ class RocketSimple:
         self.__length = nose.getLength() + body.getLength() + (SC/np.tan(theta)-RC) + TC
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
-        # DRAG COEFFICIENT (at some arbitrary speed, 30 m/s)
-        Forces.updateCd_2(self, [0, 0, 0], [150, 0, 0], 0)
-        print("Rocket initialized!\n")
-        self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
+        # DRAG COEFFICIENT (at some arbitrary speed, 150 m/s)
+        Forces.updateCd(self, [0, 0, 0], [150, 0, 0], 0)
+        if verbose: print("Rocket initialized!\n")
+        if verbose: self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
 
     # Rocket parts
     def getNose(self):
@@ -752,7 +783,7 @@ class RocketSimple:
 
         :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
-        Forces.updateCd_2(rocket, position, velocity, AoA, self.getCompressibilityState())
+        Forces.updateCd(self, position, velocity, AoA, self.getCompressibilityState())
         drag = Forces.SAMdrag(self, position, velocity)
         lift = Forces.SAMlift(self, position, velocity, AoA)
         return np.array([drag, lift])
@@ -821,7 +852,7 @@ class RocketSimple:
         print(dots)
 
     @staticmethod
-    def from_file(rocket_file, path_to_file=""):
+    def from_file(rocket_file, path_to_file="", **kwargs):
         """
         Creating an instance of a rocket by reading a rocket file that is located in a folder containing files for all
         necessary rocket parts.
@@ -857,7 +888,7 @@ class RocketSimple:
         nose = Nose.from_file(path + noseFile)
         body = Body.from_file(path + bodyFile)
         fin = Fin.from_file(path + finFile)
-        motor = Motor.from_file(path + motorFile)
+        motor = Motor.from_file(path + motorFile, kwargs)
         payload = Payload.from_file(path + payloadFile)
 
         return RocketSimple(nose, body, fin, eval(numberOfFins), motor, payload, partsPlacement)
