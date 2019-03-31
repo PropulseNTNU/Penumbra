@@ -14,7 +14,7 @@ def integrate(prev_sum, value, step):
 def controller(error, ki, kp, riemann_sum, dt):#PI-controller
   #add a lower and upper bound to prevernt overflow
   riemann_sum = integrate(riemann_sum, error, dt)#integrates error
-  return kp*error + ki*riemann_sum
+  return kp*error + ki*riemann_sum, riemann_sum
 
 
 #functions for testing
