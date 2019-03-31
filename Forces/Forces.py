@@ -62,7 +62,7 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
     else:
         Cfb = 0.032*(100e-6/D)**0.2
     # Body drag contrib. (assuming no boat tail) (eq 41)
-    Cd_fb = (1 + 60/(Ltot/D)**3 + (2.5e-3)*Lb/D)*(2.7*Ln/D + 4*Lb/D)*Cfb
+    Cd_fb = (1 + 60/(Ltot/D)**3 + (2.5e-3)*Lb/D)*(2.7*Ln/D + 4*Lb/D)*Cfb*0.1
     # Base drag contrib. (due to boundary layer seperation, low pressure region)
     if Cd_fb != 0:
         Cd_b = 0.029/np.sqrt(Cd_fb)
