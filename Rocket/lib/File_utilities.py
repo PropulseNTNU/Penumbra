@@ -48,25 +48,18 @@ def unwrap_report1(file, T, alpha_max, delta_v, v0):
     return alpha_axis, speed_axis, drag, lift, moment
 
 
-def unwrap_report2(file):
+def unwrap_CFD_report(file):
     """
-    Reads CFD file that now include AoA and speed as separate columns.
+    Reads CFD file with CFD values (drag, lift or moment about COM) 
+        *** Assuming 1 airspeed per column, and 1 AoA per row
+        *** Assuming that there are only floats in the file.
 
-    **Assuming file format is like in the V9 folder on Google Drive.**
-
-    :param file: The CFD file (full-report)
-    :return: AoA, air_speed, lift, drag, total_moment (about CG) as [1D np.array]
+    :param file: The CFD file [File]
+    :return: CFD_data [2D array] 
     """
-    report = loadtxt(file, skiprows=1, dtype=float)
+    CFD = loadtxt(file, skiprows=1, dtype=float)
 
-    AoA = report[:, 0]
-    speed = report[:, 1]
-    lift = report[:, 2]
-    drag = report[:, 3]
-    aeroForce = stack((drag, lift))
-    moment = report[:, 4]
-
-    return AoA, speed, aeroForce, moment
+    return CFD
 
 
 def unwrap_openRocket(file):

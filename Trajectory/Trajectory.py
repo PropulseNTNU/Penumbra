@@ -35,9 +35,9 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
     gravity = np.array([forces[i][:,2] for i in range(n)])
     thrust = np.array([forces[i][:,3] for i in range(n)])
     # Transform velocity to world frame for plot
-    velocity = np.zeros(shape=(len(t),3)) # in world frame
-    acceleration = np.zeros((len(t), 3))
-    for i in range(len(t)):
+    velocity = np.zeros(shape=(n,3)) # in world frame
+    acceleration = np.zeros((n, 3))
+    for i in range(n):
         RotationBody2Inertial = Kinematics.Ryzx(euler[i][0], euler[i][1], euler[i][2])
         velocity[i] = RotationBody2Inertial @ linearVelocity[i]
         acceleration[i] = RotationBody2Inertial @ acc[i]
@@ -93,14 +93,11 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     # dPosition and dQuaternion
     RotationBody2Inertial = Kinematics.Rquaternion(quaternion)
     RotationInertial2Body = RotationBody2Inertial.T
-    # Velocity of rocket in world frame
-    dPosition = RotationBody2Inertial @ linearVelocity.T
-    dQuaternion = Kinematics.quaternionGradient(quaternion) @ angularVelocity.T
-    # forces in the body frame
-    thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
+    # gravity in world coords.    
     gravityWorld = np.array([0, 0, rocket.getMass(t)*Forces.g])
-    gravityBody = RotationInertial2Body @ gravityWorld
-    # aerodynamic forces
+    # Velocity of rocket in world frame
+    dPosition = RotationBody2Inertial @ linearVelocity
+    dQuaternion = Kinematics.quaternionGradient(quaternion) @ angularVelocity
     # Add wind to current rocket velocity to get total air velocity
     airVelocity = dPosition + windVelocity
     xAxisBody = RotationBody2Inertial[:,0]
@@ -113,11 +110,12 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
-    # Get drag and lift for current state
-    Forces.updateCd_2(rocket, position, linearVelocity, AoA, rocket.getCompressibilityState())
+    # Forces in body frame
     aeroForces = rocket.getAeroForces(AoA, position, airVelocity)
-    drag = RotationInertial2Body @ aeroForces[0].T
+    drag = RotationInertial2Body @ aeroForces[0]
     lift = aeroForces[1]*dirLiftBody
+    thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
+    gravityBody = RotationInertial2Body @ gravityWorld
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
     H = Kinematics.TransformationMatrix(rocket.getCOM(t))
@@ -137,12 +135,12 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj):
         totalMoment = np.array([0, 0, 0])
     else:
         # After launch ramp, allow it to rotate (now calculating torques about COM)
-        arm = rocket.getCOP(AoA) - rocket.getCOM(t)
-        totalMoment = np.cross(arm, drag + lift)
+        armAero = rocket.getCOP(AoA) - rocket.getCOM(t)
+        totalMoment = np.cross(armAero, drag + lift)
     genForceBody = H.T @ np.concatenate((totalForce, totalMoment))
     # find dx
     genVelocity = np.concatenate((linearVelocity, angularVelocity))
-    rhs = genForceBody - CBody @ genVelocity.T
+    rhs = genForceBody - CBody @ genVelocity
     dGeneralizedVelocity = np.linalg.solve(IBody, rhs)
     dx = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
 

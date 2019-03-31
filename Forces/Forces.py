@@ -18,47 +18,7 @@ nu = 1.511e-5  # Kinematic viscosity of air [m^2/s]
 c = 343  # Speed of sound (at 293K) [m/s]
 
 # Forces
-def Drag1(rocket, position, linearVelocityBody, AoA):
-    """
-    Reference: OpenRocket techDoc, section 3.4.2
-       Assuming contribution to skin drag is component of velocity along body.
-    :param rocket: [rocket class] The rocket object
-    :param position: [np.array] The position vector in world coordinates
-    :param linearVelocity: [np.array] The current rocket velocity in body coord. (with wind)
-    :return: [np.array] drag force in the world frame [N]
-    """
-    z = abs(position[2])  # Vertical position of rocket
-    velocity = np.array([linearVelocityBody[0], 0, 0])  # component along body x-axis that contributes
-    speed = np.linalg.norm(velocity)
-    M = speed/c
-    AwetNose = rocket.getNose().getSurfaceArea()
-    AwetBody = rocket.getBody().getSurfaceArea()
-    N = rocket.getNumberOfFins()
-    AwetFins = 2*N*rocket.getFin().getSurfaceArea()
-    Awet = AwetNose + AwetBody + AwetFins
-    D = rocket.getBody().getDiameter()
-    R = speed*D/nu  # Reynold's number (Kinematic viscosity)
-    Rcrit = 51*(100e-6/D)**(-1.039)
-    Cf = 0
-    # Conditions for different Reynold's number
-    if R < 1e4:
-        Cf = 1.48e-2
-    elif 1e4 < R < Rcrit:
-        Cf = 1/(1.5*np.log(R)-5.6)**2
-    else:
-        Cf = 0.032*(100e-6/D)**0.2
-
-    # Conditions for different speeds (subsonic/supersonic)
-    if M < 0.8:
-        Cf = Cf*(1 - 0.1*M**2)
-    else:
-        Cf = Cf/(1 + 0.15*M**2)**0.58
-
-    k = 1/2*rho0*Awet*Cf*np.exp(-z/h)
-    #TODO Complete this function (Using updateCd_2 for now, probably better)
-    return -k*speed*velocity
-
-def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility=True):
+def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=True):
     """
     Reference: 
     -"Estimating the dynamic and aerodynamic paramters of
@@ -93,13 +53,14 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     Ltot = Lb + Ln
     D = rocket.getBody().getDiameter()
     R = speed*Ltot/nu  # Reynold's number (Kinematic viscosity)
-    B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cfb = 0
-    # Conditions for different R
-    if 0 < R <= Rcrit:
-        Cfb = 1.328/(R**0.5)
-    elif R > Rcrit:
-        Cfb = 0.074/(R**0.2) - B/R
+    # Conditions for different Reynold's number
+    if R < 1e4:
+        Cfb = 1.48e-2
+    elif 1e4 < R < Rcrit:
+        Cfb = 1/(1.5*np.log(R)-5.6)**2
+    else:
+        Cfb = 0.032*(100e-6/D)**0.2
     # Body drag contrib. (assuming no boat tail) (eq 41)
     Cd_fb = (1 + 60/(Ltot/D)**3 + (2.5e-3)*Lb/D)*(2.7*Ln/D + 4*Lb/D)*Cfb
     # Base drag contrib. (due to boundary layer seperation, low pressure region)
@@ -116,7 +77,6 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
     Abe = rocket.getBody().getSurfaceArea()
     Afp = Afe + 1/2*D*Lr
     R = R*Lm/Ltot
-    B = Rcrit*(0.074/(R**0.2) - 1.328/(R**0.5))
     Cff = 0
     # Conditions for different Reynold's number
     if R < 1e4:
@@ -150,10 +110,10 @@ def updateCd_2(rocket, position, linearVelocityBody, AoA, enable_compressibility
 
     # Compressibility:
     if enable_compressibility:
-        if M < 0.93:
+        if M < 0.90:
             CD /= np.sqrt(1 - M**2)
-        elif 0.93 <= M < 1.1:
-            CD /= np.sqrt(1 - (0.93)**2)
+        elif 0.90 <= M < 1.1:
+            CD /= np.sqrt(1 - (0.90)**2)
         else:
             CD /= np.sqrt(M**2 - 1)
 

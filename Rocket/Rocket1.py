@@ -542,7 +542,7 @@ class Motor:
 
 class Payload:
     def __init__(self, width):
-        self.__mass = 0  # this mass is fixed for all rockets qualified for competition.
+        self.__mass = 170e-3  # this mass is fixed for all rockets qualified for competition.
         self.__width = width
         print('Payload initialized!\n')
 
@@ -633,12 +633,12 @@ class RocketSimple:
 
         print("\tCalculating inertia matrix of rocket..")
         # MOMENT OF INERTIA (about rocket axes with origin at COM, calculated with parallel axis thm)
-        noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*(self.__COM - self.__noseCOM)**2
-        bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*(self.__COM - self.__bodyCOM)**2
+        noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*nose.getLength()**2
+        bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*nose.getLength()**2
         finMOI = self.__N*(fin.getInertiaMatrix() + (np.diag([1, 0, 0])*(body.getDiameter()/2 + y)**2 +
-                                                     np.diag([0, 1, 1])*(self.__COM - self.__finCOM)**2)*fin.getMass())
-        motorMOI = motor.getInertiaMatrix(0) + np.diag([0, 1, 1])*self.__motorMass*(self.__COM - self.__motorCOM)**2
-        payloadMOI = payload.getInertiaMatrix() + np.diag([0, 1, 1])*payload.getMass()*(self.__COM - self.__payloadCOM)**2
+                                                     np.diag([0, 1, 1])*(self.__finCOM**2)*fin.getMass()))
+        motorMOI = motor.getInertiaMatrix(0) + np.diag([0, 1, 1])*self.__motorMass*(self.__motorCOM)**2
+        payloadMOI = payload.getInertiaMatrix() + np.diag([0, 1, 1])*payload.getMass()*(self.__payloadCOM)**2
 
         self.__rocketStructureMOI = noseMOI + bodyMOI + finMOI + payloadMOI
         # FINAL MOMENT OF INERTIA MATRIX
@@ -684,7 +684,7 @@ class RocketSimple:
         self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t)[0] - self.__rocketStructure[
             0].getLength() - self.__rocketStructure[2].getLength()
         motorMass = self.getMotor().getMass(t)
-        motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.getCOM(t)[0] - self.__motorCOM)**2
+        motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.__motorCOM)**2
         self.__InertiaMatrix = self.__rocketStructureMOI + motorMOI
         return self.__InertiaMatrix
 
@@ -707,10 +707,10 @@ class RocketSimple:
         Ms = self.__rocketMass
         Mm = self.__motorMass
         M = Mm + Ms
-        Xcom = self.__COM
+        self.__COM = com
         XcomMotor = self.__motorCOM
 
-        self.__rocketStructureCOM = (M*Xcom - Mm*XcomMotor)/Ms
+        self.__rocketStructureCOM = (M*com - Mm*XcomMotor)/Ms
 
     def getCOMofParts(self):
         return self.__COMofRocketStructure
@@ -752,6 +752,7 @@ class RocketSimple:
 
         :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
+        Forces.updateCd_2(rocket, position, velocity, AoA, self.getCompressibilityState())
         drag = Forces.SAMdrag(self, position, velocity)
         lift = Forces.SAMlift(self, position, velocity, AoA)
         return np.array([drag, lift])
@@ -787,7 +788,7 @@ class RocketSimple:
         motorCOM = self.__motorCOM + self.getMotor().getCOM(t) - self.getMotor().getCOM(0)
         COM = self.getCOM(t)[0]
         COP = self.getCOP(AoA)[0]
-        stability_margin = self.getStabilityMargin(AoA)/self.getBody().getDiameter()
+        stability_margin = (COM - COP)/self.getBody().getDiameter()
         MOI = self.getInertiaMatrix(t)
         Cd = self.getCd()
         Cn = self.getCn(AoA)
