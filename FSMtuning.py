@@ -123,7 +123,7 @@ def main():
 
         # Update rocket with new data
         # *Anew/Aold
-        Rocket.setCd(Cd*Anew/Aold)
+        #Rocket.setCd(Cd*Anew/Aold)
 
         # Calculate equations of motion
         t = timelist[i]
