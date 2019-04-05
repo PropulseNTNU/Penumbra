@@ -57,7 +57,7 @@ def unwrap_CFD_report(file):
     :param file: The CFD file [File]
     :return: CFD_data [2D array] 
     """
-    CFD = loadtxt(file, dtype=float).T
+    CFD = loadtxt(file, dtype=float)
     speed = CFD[:,0][1:]
     AoA = CFD[0][1:]
 

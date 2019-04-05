@@ -788,14 +788,16 @@ class RocketSimple:
         lift = Forces.SAMlift(self, position, velocity, AoA)
         return np.array([drag, lift])
 
-    def getMomentAboutCOM(self, position, velocity, AoA):
+    def getMomentAboutCOM(self, position, velocity, AoA, t):
         """
         :param velocity: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [np.array] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
         """
-        #TODO Implement this
+        arm = self.getCOP(position, velocity, AoA) - self.getCOM(t)
+        forces = self.getAeroForces(position, velocity, AoA)
+        return np.cross(arm, forces[0] + forces[1])
 
     def getCd(self):
         return self.__Cd

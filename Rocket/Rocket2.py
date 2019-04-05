@@ -159,7 +159,7 @@ class RocketCFD:
     def getInertiaMatrix(self, t):
         """
         :param t: [float] point in time [s]
-        :return [np.array, 3x3 matrix] The inertia matrix at time t [kgm^2]
+        :return [np.array, 3x3 matrix] The inertia matrix at time t, centered at body origin [kgm^2]
 
         NOTE: Currently assuming that fuel is burning radially.
         """
@@ -175,8 +175,9 @@ class RocketCFD:
         mInertia = self.__motor.getInertiaMatrix(t)
         deltaR = rCOMx - rInitCOMx
         deltaM = rCOMx + mInitCOMx + self.getLength()
+        m = self.getMass(t) - mMass
         return I0 + rInitMass*np.diag([0, deltaR**2, deltaR**2]) + (mInertia - mInitInertia) + (
-                    mMass - mInitMass)*np.diag([0, deltaM**2, deltaM**2])
+                    mMass - mInitMass)*np.diag([0, deltaM**2, deltaM**2]) + m*rCOMx**2*np.diag([0, 1, 1])
 
     # auxiliary
     def plot(self):
@@ -187,7 +188,7 @@ class RocketCFD:
         time = self.__time
         burnTime = self.__motor.getBurnTime()
         print('Creating plot of COM and mass...')
-        COM = np.array([self.getCOMx(t) for t in time])
+        COM = np.array([self.getCOM(t)[0] for t in time])
         mass = np.array([self.getMass(t) for t in time])
         plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[cm]')

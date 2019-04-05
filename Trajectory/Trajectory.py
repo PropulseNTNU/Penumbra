@@ -117,6 +117,8 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
+    dirMomentBody = np.cross(xAxisBody, dirDragBody)
+    dirMomentBody = dirMomentBody/(np.linalg.norm(dirMomentBody) + epsilon)
     # Forces in body coords
     aeroForces = rocket.getAeroForces(position, airVelocity, AoA)
     drag = aeroForces[0]*dirDragBody

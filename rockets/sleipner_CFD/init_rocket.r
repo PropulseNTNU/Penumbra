@@ -9,12 +9,12 @@ Center of mass: ( millimeters )
 initial_com = -1438e-3
 
 Length of rocket: ( millimeters )
-length = 2.50e3
+length = 2500e-3
 
 Moments of inertia: ( grams *  square millimeters )
 Taken at the center of mass and aligned along principle axes.
-initial_moi = 0.11875e9, 16.188e9, 16.188e9
+initial_moi = 0.11875, 16.188, 16.188
 
 Motor:
-motor = motors/CesaroniM1450.dot
+motor = ../motors/CesaroniM1450.dot
 
