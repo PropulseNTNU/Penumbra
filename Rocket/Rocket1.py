@@ -6,12 +6,11 @@ Last edit: 04.02.2019
 
 --Propulse NTNU--
 """
-verbose = False
+verbose = True
 
 import sys
 sys.path.append('../Forces/')
 import Forces as Forces
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
@@ -548,7 +547,7 @@ class Motor:
         self.__init__(*self.__argsMemory, frequency = self.__freq, deviation = self.__stdDev)
 
     @staticmethod
-    def from_file(motorFile, kwargs):
+    def from_file(motorFile, *kwargs):
         """
             Read a file with motor specs.
             ASSUMPTIONS: -
@@ -572,11 +571,11 @@ class Motor:
                     f = eval(row[1])
                     thrust.append([t, f])
         thrust = np.array(thrust)
-        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass), kwargs)
+        return Motor(name, thrust, float(totalImpulse), float(diameter), float(length), float(propMass), float(frameMass), *kwargs)
 
 class Payload:
     def __init__(self, width):
-        self.__mass = 4  # this mass is fixed for all rockets qualified for competition.
+        self.__mass = 4000e-3  # this mass is fixed for all rockets qualified for competition.
         self.__width = width
         if verbose: print('Payload initialized!\n')
 
@@ -658,21 +657,19 @@ class RocketSimple:
         TC = fin.getTipChord()
         theta = fin.getTopEdgeAngle()*np.pi/180.0 # TopEdgeAngle is in degrees
         y = SC*(2*TC + RC)/(3*(TC + RC))
-        Lf = np.sqrt(SC**2 + (SC/np.tan(theta) + 1/2*(TC - RC))**2)
         self.__CNfin = (1 + R/(R + SC))*(4*self.__N*(SC/(2*R))**2/(1 + np.sqrt(1 + (2*MC/(RC + TC))**2)))
         Xb = partsPlacement[0] - nose.getLength() + RC  # Position of leading edge of fin on the body (relative to nose tip)
-        Xr = -SC/np.tan(theta)
         Xf = Xb - MC/3*(RC + 2*TC)/(RC + TC) - 1/6*((RC + TC) - RC*TC/(RC + TC))
         self.__Xcp_fin = Xf
 
         if verbose: print("\tCalculating inertia matrix of rocket..")
         # MOMENT OF INERTIA (about rocket axes with origin at COM, calculated with parallel axis thm)
-        noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*(self.__COM - self.__noseCOM)**2
-        bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*(self.__COM - self.__bodyCOM)**2
+        noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*nose.getLength()**2
+        bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*nose.getLength()**2
         finMOI = self.__N*(fin.getInertiaMatrix() + (np.diag([1, 0, 0])*(body.getDiameter()/2 + y)**2 +
-                                                     np.diag([0, 1, 1])*(self.__COM - self.__finCOM)**2)*fin.getMass())
-        motorMOI = motor.getInertiaMatrix(0) + np.diag([0, 1, 1])*self.__motorMass*(self.__COM - self.__motorCOM)**2
-        payloadMOI = payload.getInertiaMatrix() + np.diag([0, 1, 1])*payload.getMass()*(self.__COM - self.__payloadCOM)**2
+                                                     np.diag([0, 1, 1])*(self.__finCOM**2)*fin.getMass()))
+        motorMOI = motor.getInertiaMatrix(0) + np.diag([0, 1, 1])*self.__motorMass*(self.__motorCOM)**2
+        payloadMOI = payload.getInertiaMatrix() + np.diag([0, 1, 1])*payload.getMass()*(self.__payloadCOM)**2
 
         self.__rocketStructureMOI = noseMOI + bodyMOI + finMOI + payloadMOI
         # FINAL MOMENT OF INERTIA MATRIX
@@ -682,8 +679,8 @@ class RocketSimple:
         self.__length = nose.getLength() + body.getLength() + (SC/np.tan(theta)-RC) + TC
         # MAXIMAL WIDTH OF ROCKET
         self.__width = body.getDiameter()/2 + SC
-        # DRAG COEFFICIENT (at some arbitrary speed, 30 m/s)
-        Forces.updateCd_2(self, [0, 0, 0], [150, 0, 0], 0)
+        # DRAG COEFFICIENT (at some arbitrary speed, 150 m/s)
+        Forces.updateCd(self, [0, 0, 0], [0, 0, 0], 0)
         if verbose: print("Rocket initialized!\n")
         if verbose: self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
 
@@ -718,7 +715,7 @@ class RocketSimple:
         self.__motorCOM = self.__rocketMotor.getLength() + self.__rocketMotor.getCOM(t)[0] - self.__rocketStructure[
             0].getLength() - self.__rocketStructure[2].getLength()
         motorMass = self.getMotor().getMass(t)
-        motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.getCOM(t)[0] - self.__motorCOM)**2
+        motorMOI = self.getMotor().getInertiaMatrix(t) + np.diag([0, 1, 1])*motorMass*(self.__motorCOM)**2
         self.__InertiaMatrix = self.__rocketStructureMOI + motorMOI
         return self.__InertiaMatrix
 
@@ -741,16 +738,16 @@ class RocketSimple:
         Ms = self.__rocketMass
         Mm = self.__motorMass
         M = Mm + Ms
-        Xcom = self.__COM
+        self.__COM = com
         XcomMotor = self.__motorCOM
 
-        self.__COM = (M*Xcom - Mm*XcomMotor)/Ms
+        self.__rocketStructureCOM = (M*com - Mm*XcomMotor)/Ms
 
     def getCOMofParts(self):
         return self.__COMofRocketStructure
 
     # Aerodynamics
-    def getCOP(self, AoA):
+    def getCOP(self, position, velocity, AoA):
         """
         :param AoA: [float] the angle of attack [rad]
 
@@ -764,9 +761,9 @@ class RocketSimple:
         COP0 = (CNnose*self.__Xcp_nose + CNbody*AoA*self.__Xcp_body + CNfin*self.__Xcp_fin)/CNrocket
         return np.array([COP0, 0, 0])
 
-    def getStabilityMargin(self, AoA, t=0):
+    def getStabilityMargin(self, position, velocity, AoA, t=0):
         COM = self.getCOM(t)[0]
-        COP = self.getCOP(AoA)[0]
+        COP = self.getCOP(position, velocity, AoA)[0]
         return COM - COP
 
     def compressibleFlow(self, state):
@@ -779,25 +776,28 @@ class RocketSimple:
     def getCompressibilityState(self):
         return self.__compressibility
 
-    def getAeroForces(self, AoA, position, velocity):
+    def getAeroForces(self, position, velocity, AoA):
         """
         :param velocity: [np.array] velocity of rocket (with wind) relative to world [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [np.array] ([drag, lift]) on rocket attacking in COP [N]
         """
+        Forces.updateCd(self, position, velocity, AoA, self.getCompressibilityState())
         drag = Forces.SAMdrag(self, position, velocity)
         lift = Forces.SAMlift(self, position, velocity, AoA)
         return np.array([drag, lift])
 
-    def getMomentAboutCOM(self, position, velocity, AoA):
+    def getMomentAboutCOM(self, position, velocity, AoA, t):
         """
         :param velocity: [float] the air speed relative to rocket [m/s]
         :param AoA: [float] the angle of attack [rad]
 
         :return: [np.array] The total moment on rocket about COM (component normal to aerodynamic plane) [Nm]
         """
-        #TODO Implement this
+        arm = self.getCOP(position, velocity, AoA) - self.getCOM(t)
+        forces = self.getAeroForces(position, velocity, AoA)
+        return np.cross(arm, forces[0] + forces[1])
 
     def getCd(self):
         return self.__Cd
@@ -820,8 +820,8 @@ class RocketSimple:
         Mass = self.getMass(t)
         motorCOM = self.__motorCOM + self.getMotor().getCOM(t) - self.getMotor().getCOM(0)
         COM = self.getCOM(t)[0]
-        COP = self.getCOP(AoA)[0]
-        stability_margin = self.getStabilityMargin(AoA)/self.getBody().getDiameter()
+        COP = self.getCOP([0, 0, 0], [0, 0, 0], AoA)[0]
+        stability_margin = (COM - COP)/self.getBody().getDiameter()
         MOI = self.getInertiaMatrix(t)
         Cd = self.getCd()
         Cn = self.getCn(AoA)
