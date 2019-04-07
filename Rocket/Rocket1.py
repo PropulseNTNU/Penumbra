@@ -6,7 +6,7 @@ Last edit: 04.02.2019
 
 --Propulse NTNU--
 """
-verbose = True
+verbose = False
 
 import sys
 sys.path.append('../Forces/')

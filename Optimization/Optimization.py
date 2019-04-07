@@ -21,6 +21,7 @@ import TrajectoryWithBrakes as traBrakes
 import Kinematics
 import datetime as dt
 from scipy.stats.kde import gaussian_kde
+import statistics
 import pickle
 import signal
 import os
@@ -184,23 +185,33 @@ class MonteCarlo:
         self.i = 0
         self.apogees = np.zeros(self.n)
 
-    def setStatus(status):
+    def setStatus(self, status):
         self.status = status
 
-    def setId(newId):
+    def setId(self, newId):
         self.id = newId
 
     def pangea(self):
         apogees = self.apogees[np.nonzero(self.apogees)]
+        mn = np.mean(apogees)
+        stdDev = statistics.stdev(apogees)
         pdf = gaussian_kde(apogees)
         x = np.linspace(np.min(apogees) - 200, np.max(apogees) + 200, 1000)
-        plt.plot(x, pdf(x))
-        plt.fill_between(x, pdf(x), color = (0.9, 0.9, 0.9))
+        x1stdDev = np.linspace(mn - stdDev, mn + stdDev, 1000)
+        x2stdDev = np.linspace(mn - 2 * stdDev, mn + 2 * stdDev, 1000)
+        x3stdDev = np.linspace(mn - 3 * stdDev, mn + 3 * stdDev, 1000)
+        #x4stdDev = np.linspace(mn - 4 * stdDev, mn + 4 * stdDev, 1000)
+        plt.plot(x, pdf(x), color = (0, 0, 0))
+        plt.fill_between(x, pdf(x), color = (0, 0, 0))
+        #plt.fill_between(x4stdDev, pdf(x4stdDev), color = (0.3, 0.3, 0.3))
+        plt.fill_between(x3stdDev, pdf(x3stdDev), color = (0.5, 0.5, 0.5), label = r"$\mu \pm 3\sigma\approx 99.7\%$")
+        plt.fill_between(x2stdDev, pdf(x2stdDev), color = (0.7, 0.7, 0.7), label = r"$\mu \pm 2\sigma\approx 95\%$")
+        plt.fill_between(x1stdDev, pdf(x1stdDev), color = (0.9, 0.9, 0.9), label = r"$\mu \pm \sigma\approx 68\%$")
+        plt.legend()
         plt.grid()
-        plt.title("Apogee PDF")
+        plt.title("Apogee PDF (ID: {})".format(self.id))
         plt.xlabel("Apogee [m]")
-        mn = np.mean(apogees)
-        plt.plot(mn, 0, 'x')
+        plt.plot(mn, 0, 'x', color = (1, 0, 0), label = "Mean")
         plt.show()
 
     def __str__(self):
@@ -210,27 +221,3 @@ class MonteCarlo:
         "Thrust frequency:".ljust(20) + str(self.thrustFreq) + '\n' + \
         "Drag deviation:".ljust(20) + str(self.dragDev) + 2*'\n' + \
         self.wind.__str__() + '\n'
-
-#test = MonteCarlo(500, rocketObj, params, thrustFreq = 20, thrustDev = 50,\
-#dragDev = 0.016, wind = windObj)
-
-#test = MonteCarlo.fromFile("190406131555452547")
-#test.flush()
-#test.run()
-#test.pangea()
-
-#test = ShootingOptimz(rocketObj, initialInclination, rampLength, timeStep,\
-#simTime, 0.1, thrustFreq = 20, thrustDev = 50, dragDev = 0.016, windObj = windObj)
-#test.stochasticShoot(14, 1, 3048, 10)
-
-# Output
-#t = trajectory[0]
-#position = trajectory[1]
-#orientation = trajectory[2]
-#AoA = trajectory[3]
-#linearVelocity = trajectory[4]
-#angularVelocity = trajectory[5]
-#drag = trajectory[6]
-#lift = trajectory[7]
-#gravity = trajectory[8]
-#thrust = trajectory[9]
