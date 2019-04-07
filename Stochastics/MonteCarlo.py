@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import Wind
 from Rocket1 import RocketSimple
 import Trajectory
+import TrajectoryWithBrakesUpdated as traBrakes
 import Kinematics
 import datetime as dt
 from scipy.stats.kde import gaussian_kde
@@ -36,18 +37,79 @@ rocketObj_path = 'Tests/myRocket1/'
 rocketObj_initFile = 'myRocket.dot'
 initialInclination = 6*deg2rad # [rad from straigth up]
 rampLength = 5 # [M]
-timeStep = 0.03 # [sec]
-simTime = 40 # [sec]
+timeStep = 0.05 # [sec]
+simTime = 35 # [sec]
 
 rocketObj = RocketSimple.from_file(rocketObj_initFile, rocketObj_path)
 params = [initialInclination, rampLength, timeStep, simTime]
-windObj = Wind.pinkWind(10, 8, simTime + 0.1)
+windObj = Wind.pinkWind(10, 5, simTime + 0.1, 0.1)
 
-def cusp(out):
-    if verbose: print(out)
+class ShootingOptimz:
+    def __init__(self, rocket, initialInclination, launchRampLength, timeStep, simulationTime, Cbrakes_in, windObj = Wind.nullWind(), thrustFreq = 0, thrustDev = 0, dragDev = 0):
+        self.rocket = rocket
+        self.initialInclination = initialInclination
+        self.launchRampLength = launchRampLength
+        self.timeStep = timeStep
+        self.simulationTime = simulationTime
+        #self.Tbrakes = Tbrakes
+        self.Cbrakes_in = Cbrakes_in
+        self.windObj = windObj
+        self.thrustFreq = thrustFreq
+        self.thrustDev = thrustDev
+        self.dragDev = dragDev
+        self.params = [initialInclination, rampLength, timeStep, simTime]
+
+
+    def run():
+        pass
+
+    def simpleShoot(self, t0, dt, targetApogee, tol):
+        t = t0
+        # Loop
+        apogee = targetApogee + 2 * tol
+        while(np.abs(targetApogee - apogee) > tol):
+            apogee = np.max(-traBrakes.calculateTrajectoryWithAirbrakes(self.rocket,\
+            self.initialInclination, self.launchRampLength, self.timeStep,\
+            self.simulationTime, t, self.Cbrakes_in, self.dragDev,\
+            self.windObj)[1][:,2])
+            a = np.sign(targetApogee - apogee)
+            if t != t0:
+                if a != b: dt /= 2
+            else:
+                b = a
+            t += a * dt
+            print(str(t).ljust(20, ' ') + str(apogee).ljust(20, ' '))
+
+    def stochasticShoot(self, t0, dt, targetApogee, tol, Tbrakes = 0, Cbrakes_in = 0):
+        t = t0
+        # Loop
+        apogee = targetApogee + 2 * tol
+        while(np.abs(targetApogee - apogee) > tol):
+            mcResult = MonteCarlo(100, self.rocket, self.params,\
+            thrustFreq = self.thrustFreq, thrustDev = self.thrustDev,\
+            dragDev = self.dragDev, wind = self.windObj,\
+            doSave = False, verbose = False, Tbrakes = t, Cbrakes_in = 1.0)
+
+            mcResult.run()
+
+            apogee = np.mean(mcResult.apogees[np.nonzero(mcResult.apogees)])
+            apogee = np.mean(mcResult.apogees[0])
+            #print(apogee)
+            print(str(t).ljust(20, ' ') + str(apogee).ljust(20, ' '))
+
+            a = np.sign(targetApogee - apogee)
+            if t != t0:
+                if a != b: dt /= 2
+            else:
+                b = a
+            t += a * dt
+
+
 
 class MonteCarlo:
-    def __init__(self, n, rocket, params, thrustFreq = 0, thrustDev = 0, dragDev = 0, wind = Wind.nullWind()):
+    def __init__(self, n, rocket, params, thrustFreq = 0, thrustDev = 0,\
+    dragDev = 0, wind = Wind.nullWind(), doSave = True, verbose = True,\
+    Tbrakes = 0, Cbrakes_in = 0):
         self.n = n
         self.apogees = np.zeros(n)
         self.deltas = np.zeros(n)
@@ -60,7 +122,11 @@ class MonteCarlo:
         self.wind = wind
         self.i = 0
         self.id = dt.datetime.now().strftime("%y%m%d%H%M%S%f")
-        cusp("Monte")
+        self.doSave = doSave
+        self.verbose = verbose
+        self.Tbrakes = Tbrakes
+        self.Cbrakes_in = Cbrakes_in
+        if self.verbose: print("Monte")
 
     def showProgess(self):
         scaledown = 1.48
@@ -104,24 +170,26 @@ class MonteCarlo:
             self.rocket.getMotor().refresh()
             self.wind.refresh()
 
-            trajectory = Trajectory.calculateTrajectory(self.rocket,\
+            trajectory = traBrakes.calculateTrajectoryWithAirbrakes(self.rocket,\
             *self.params[0:4], windObj = self.wind,\
-            dragDeviation = self.dragDev)
+            dragDeviation = self.dragDev, Tbrakes = self.Tbrakes,\
+            Cbrakes_in = self.Cbrakes_in)
 
 
             self.apogees[self.i] = np.max(-trajectory[1][:,2])
 
-            with open(self.id + ".mc", "wb") as save:
-                pickle.dump(self, save)
+            if self.doSave:
+                with open(self.id + ".mc", "wb") as save:
+                    pickle.dump(self, save)
 
             Tf = dt.datetime.now()
             self.deltas[self.i] = (Tf - T0).total_seconds()
 
             self.i += 1
 
-            self.showProgess()
+            if self.verbose: self.showProgess()
 
-        print("Process terminated, id: {}".format(self.id))
+        if self.verbose: print("Process terminated, id: {}".format(self.id))
 
     @staticmethod
     def fromFile(id):
@@ -159,13 +227,17 @@ class MonteCarlo:
         "Drag deviation:".ljust(20) + str(self.dragDev) + 2*'\n' + \
         self.wind.__str__() + '\n'
 
-#test = MonteCarlo(30000, rocketObj, params, thrustFreq = 20, thrustDev = 50,\
+#test = MonteCarlo(500, rocketObj, params, thrustFreq = 20, thrustDev = 50,\
 #dragDev = 0.016, wind = windObj)
 
-test = MonteCarlo.fromFile("190327225234737225")
+test = MonteCarlo.fromFile("190406131555452547")
 #test.flush()
-test.run()
+#test.run()
 test.pangea()
+
+#test = ShootingOptimz(rocketObj, initialInclination, rampLength, timeStep,\
+#simTime, 0.1, thrustFreq = 20, thrustDev = 50, dragDev = 0.016, windObj = windObj)
+#test.stochasticShoot(14, 1, 3048, 10)
 
 # Output
 #t = trajectory[0]

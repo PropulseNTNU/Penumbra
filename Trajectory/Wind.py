@@ -9,6 +9,9 @@ class nullWind:
     def __init__(self):
         pass
 
+    def refresh(self):
+        pass
+
     def getWindVector(self, alt, *args):
         return np.zeros(3)
 
@@ -23,12 +26,17 @@ class engWind:
         self.alt0 = alt0
         if type(speed0) == list:
             self.speed0 = np.random.uniform(speed0[0], speed0[1])
+            self.speed0Array = speed0
         else:
             self.speed0 = speed0
+            self.speed0Array = [speed0]
+
         if type(speed0) == list:
             self.direction = np.random.uniform(direction[0], direction[1])
+            self.directionArray = direction
         else:
             self.direction = direction
+            self.directionArray = [direction]
 
     def __str__(self):
         outString = "Engineering wind\n" + "-"*16 +\
@@ -81,7 +89,7 @@ class whiteWind(engWind):
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
 
 class pinkWind(whiteWind):
-    def __init__(self, alt0, speed0, t, direction = np.random.uniform(0, 2 * np.pi)):
+    def __init__(self, alt0, speed0, t, direction):
         self.initParams = [alt0, speed0, t, direction]
         alpha = 5/3
         whiteWind.__init__(self, alt0, speed0, t, direction)
@@ -100,6 +108,6 @@ class pinkWind(whiteWind):
 
     def __str__(self):
         outString = "Pink wind\n" + "-"*16 +\
-        "\nalpha: {:.3f}\nalt0: {:.3f}\nspeed0: {:.3f}\ndirection: {:.3f}"\
-        .format(self.alpha, self.alt0, self.speed0, self.direction)
+        "\nalpha: {:.3f}\nalt0: {:.3f}\nspeed0: {}\ndirection: {}"\
+        .format(self.alpha, self.alt0, self.speed0Array, self.directionArray)
         return outString
