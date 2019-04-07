@@ -6,10 +6,10 @@ Last edit: 02.03.2019
 '''
 # Telling the system where to look
 import sys
-sys.path.append("Forces/")
-sys.path.append("Rocket/")
-sys.path.append("Trajectory/")
-sys.path.append("Visual/")
+sys.path.append("../Forces/")
+sys.path.append("../Rocket/")
+sys.path.append("../Trajectory/")
+sys.path.append("../Visual/")
 # Import of external libs
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import Wind
 from Rocket1 import RocketSimple
 import Trajectory
-import TrajectoryWithBrakesUpdated as traBrakes
+import TrajectoryWithBrakes as traBrakes
 import Kinematics
 import datetime as dt
 from scipy.stats.kde import gaussian_kde
@@ -28,29 +28,13 @@ import os
 verbose = True
 interrupted = False
 
-
-deg2rad = np.pi / 180
-rad2deg = 180 / np.pi
-
-# Initiaton of rocket object
-rocketObj_path = 'Tests/myRocket1/'
-rocketObj_initFile = 'myRocket.dot'
-initialInclination = 6*deg2rad # [rad from straigth up]
-rampLength = 5 # [M]
-timeStep = 0.05 # [sec]
-simTime = 35 # [sec]
-
-rocketObj = RocketSimple.from_file(rocketObj_initFile, rocketObj_path)
-params = [initialInclination, rampLength, timeStep, simTime]
-windObj = Wind.pinkWind(10, 5, simTime + 0.1, 0.1)
-
 class ShootingOptimz:
-    def __init__(self, rocket, initialInclination, launchRampLength, timeStep, simulationTime, Cbrakes_in, windObj = Wind.nullWind(), thrustFreq = 0, thrustDev = 0, dragDev = 0):
+    def __init__(self, rocket, initialInclination, rampLength, timeStep, simTime, Cbrakes_in, windObj = Wind.nullWind(), thrustFreq = 0, thrustDev = 0, dragDev = 0):
         self.rocket = rocket
         self.initialInclination = initialInclination
-        self.launchRampLength = launchRampLength
+        self.launchRampLength = rampLength
         self.timeStep = timeStep
-        self.simulationTime = simulationTime
+        self.simulationTime = simTime
         #self.Tbrakes = Tbrakes
         self.Cbrakes_in = Cbrakes_in
         self.windObj = windObj
@@ -230,10 +214,10 @@ class MonteCarlo:
 #test = MonteCarlo(500, rocketObj, params, thrustFreq = 20, thrustDev = 50,\
 #dragDev = 0.016, wind = windObj)
 
-test = MonteCarlo.fromFile("190406131555452547")
+#test = MonteCarlo.fromFile("190406131555452547")
 #test.flush()
 #test.run()
-test.pangea()
+#test.pangea()
 
 #test = ShootingOptimz(rocketObj, initialInclination, rampLength, timeStep,\
 #simTime, 0.1, thrustFreq = 20, thrustDev = 50, dragDev = 0.016, windObj = windObj)
