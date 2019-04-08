@@ -1,3 +1,4 @@
+itv
 """
 A library to solve the equations of motion for a 6 DOF rocket object.
 
@@ -106,21 +107,19 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     dPosition = RotationBody2Inertial @ linearVelocity
     dQuaternion = Kinematics.quaternionGradient(quaternion) @ angularVelocity
     # Add wind to current rocket velocity to get total air velocity
-    airVelocity = dPosition + windVelocity
+    airVelocity = windVelocity - dPosition
     xAxisBody = RotationBody2Inertial[:,0]
     dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
     # definition of angle of attack
-    AoA = np.arccos(np.dot(dirWindVelocity, xAxisBody))
+    AoA = np.arccos(np.dot(-dirWindVelocity, xAxisBody))
     # unit vector that points in drag direction (body coords.)
-    dirDragBody = RotationInertial2Body @ (-dirWindVelocity)
+    dirDragBody = RotationInertial2Body @ (dirWindVelocity)
     projectedDragBody = np.array([0, dirDragBody[1], dirDragBody[2]])
     dirProjectedDragBody = projectedDragBody/(np.linalg.norm(projectedDragBody) + epsilon)
     # unit vector that points in lift direction (body coords.)
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
-    dirMomentBody = np.cross(xAxisBody, dirDragBody)
-    dirMomentBody = dirMomentBody/(np.linalg.norm(dirMomentBody) + epsilon)
     # Forces in body coords
-    aeroForces = rocket.getAeroForces(position, airVelocity, AoA)
+    aeroForces = rocket.getAeroForces(position, -airVelocity, AoA)
     drag = aeroForces[0]*dirDragBody
     lift = aeroForces[1]*dirLiftBody
     thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
