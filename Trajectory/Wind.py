@@ -1,10 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
 
-class weibull:
-    def __init__():
-        pass
-
 class nullWind:
     def __init__(self):
         pass
@@ -31,7 +27,7 @@ class engWind:
             self.speed0 = speed0
             self.speed0Array = [speed0]
 
-        if type(speed0) == list:
+        if type(direction) == list:
             self.direction = np.random.uniform(direction[0], direction[1])
             self.directionArray = direction
         else:
@@ -55,47 +51,23 @@ class engWind:
         direction = self.direction
         return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
 
-class whiteWind(engWind):
-    def __init__(self, alt0, speed0, t, direction):
-        self.initParams = [alt0, speed0, t, direction]
+class pinkWind(engWind):
+    def __init__(self, t, speed0, alt0 = 10, intensity = 0.1, direction = 0):
+        self.initParams = [t, speed0, alt0, intensity, direction]
         engWind.__init__(self, alt0, speed0, direction)
-        self.t = t
-        self.freq = 20
-        timeDomain = np.linspace(0, t, self.freq * t)
-        varience = np.array([np.random.normal(scale = 0.5)\
-        for timeDomain in timeDomain])
-
-        self.Uv = interp1d(timeDomain, varience)
-
-    def refresh(self):
-        self.__init__(*self.initParams)
-
-    def __str__(self):
-        outString = "White wind\n" + "-"*16 +\
-        "\nalpha: {:.3f}\nalt0: {:.3f}\nspeed0: {:.3f}\ndirection: {:.3f}"\
-        .format(self.alpha, self.alt0, self.speed0, self.direction)
-        return outString
-
-    def getMagnitude(self, alt, timeDomain):
-        n = self.Uv(timeDomain)
-        if alt > 0:
-            return self.speed0 * (alt / self.alt0) ** (1 / self.alpha) + n
-        else:
-            return 0
-
-    def getWindVector(self, alt, timeDomain):
-        mag = self.getMagnitude(alt, timeDomain)
-        direction = self.direction
-        return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
-
-class pinkWind(whiteWind):
-    def __init__(self, alt0, speed0, t, direction):
-        self.initParams = [alt0, speed0, t, direction]
+        # To avoid extrapolation errors
+        t += 1
         alpha = 5/3
-        whiteWind.__init__(self, alt0, speed0, t, direction)
         self.t = t
         self.freq = 20
         timeDomain = np.linspace(0, t, self.freq * t)
+
+        if type(intensity) == list:
+            self.I = np.random.uniform(intensity[0], intensity[1])
+            self.IArray = intensity
+        else:
+            self.I = intensity
+            self.IArray = [intensity]
 
         n = int(np.ceil(self.freq*t))
         x = np.zeros(n)
@@ -106,8 +78,24 @@ class pinkWind(whiteWind):
 
         self.Uv = interp1d(timeDomain, x)
 
+    def refresh(self):
+        self.__init__(*self.initParams)
+
+    def getMagnitude(self, alt, timeDomain):
+        if alt > 0:
+            U = self.speed0 * (alt / self.alt0) ** (1 / self.alpha)
+            n = self.Uv(timeDomain) * (self.I * U)
+            return U + n
+        else:
+            return 0
+
+    def getWindVector(self, alt, timeDomain):
+        mag = self.getMagnitude(alt, timeDomain)
+        direction = self.direction
+        return np.array([mag*np.cos(direction), mag*np.sin(direction), 0])
+
     def __str__(self):
         outString = "Pink wind\n" + "-"*16 +\
-        "\nalpha: {:.3f}\nalt0: {:.3f}\nspeed0: {}\ndirection: {}"\
-        .format(self.alpha, self.alt0, self.speed0Array, self.directionArray)
+        "\nalpha: {:.3f}\nalt0: {:.3f}\nspeed0: {}\ndirection: {}\nintensity: {}"\
+        .format(self.alpha, self.alt0, self.speed0Array, self.directionArray, self.IArray)
         return outString

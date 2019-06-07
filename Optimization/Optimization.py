@@ -21,10 +21,12 @@ import TrajectoryWithBrakes as traBrakes
 import Kinematics
 import datetime as dt
 from scipy.stats.kde import gaussian_kde
+import scipy
 import statistics
 import pickle
 import signal
 import os
+from scipy.interpolate import interp1d
 
 verbose = True
 interrupted = False
@@ -94,7 +96,7 @@ class ShootingOptimz:
 class MonteCarlo:
     def __init__(self, n, rocket, params, thrustFreq = 0, thrustDev = 0,\
     dragDev = 0, wind = Wind.nullWind(), doSave = True, verbose = True,\
-    Tbrakes = 0, Cbrakes_in = 0):
+    Tbrakes = 60, Cbrakes_in = 0):
         self.n = n
         self.apogees = np.zeros(n)
         self.deltas = np.zeros(n)
@@ -142,6 +144,7 @@ class MonteCarlo:
 
 
     def run(self):
+        global interrupted
         #os.system("cls")
         def signal_handler(signal, frame):
             global interrupted
@@ -164,8 +167,7 @@ class MonteCarlo:
             self.apogees[self.i] = np.max(-trajectory[1][:,2])
 
             if self.doSave:
-                with open(self.id + ".mc", "wb") as save:
-                    pickle.dump(self, save)
+                self.save()
 
             Tf = dt.datetime.now()
             self.deltas[self.i] = (Tf - T0).total_seconds()
@@ -174,6 +176,7 @@ class MonteCarlo:
 
             if self.verbose: self.showProgess()
 
+        interrupted = False
         if self.verbose: print("Process terminated, id: {}".format(self.id))
 
     @staticmethod
@@ -187,6 +190,10 @@ class MonteCarlo:
 
     def setStatus(self, status):
         self.status = status
+
+    def save(self):
+        with open(self.id + ".mc", "wb") as save:
+            pickle.dump(self, save)
 
     def setId(self, newId):
         self.id = newId
@@ -204,15 +211,100 @@ class MonteCarlo:
         plt.plot(x, pdf(x), color = (0, 0, 0))
         plt.fill_between(x, pdf(x), color = (0, 0, 0))
         #plt.fill_between(x4stdDev, pdf(x4stdDev), color = (0.3, 0.3, 0.3))
-        plt.fill_between(x3stdDev, pdf(x3stdDev), color = (0.5, 0.5, 0.5), label = r"$\mu \pm 3\sigma\approx 99.7\%$")
-        plt.fill_between(x2stdDev, pdf(x2stdDev), color = (0.7, 0.7, 0.7), label = r"$\mu \pm 2\sigma\approx 95\%$")
-        plt.fill_between(x1stdDev, pdf(x1stdDev), color = (0.9, 0.9, 0.9), label = r"$\mu \pm \sigma\approx 68\%$")
-        plt.legend()
+        stdDev3p = scipy.integrate.quad(pdf, mn - 3 * stdDev, mn + 3 * stdDev)[0]
+        stdDev2p = scipy.integrate.quad(pdf, mn - 2 * stdDev, mn + 2 * stdDev)[0]
+        stdDev1p = scipy.integrate.quad(pdf, mn - stdDev, mn + stdDev)[0]
+        plt.fill_between(x3stdDev, pdf(x3stdDev), color = (0.5, 0.5, 0.5), label = r"$\mu \pm 3\sigma\equal {:.1f}\%$".format(stdDev3p * 100))
+        plt.fill_between(x2stdDev, pdf(x2stdDev), color = (0.7, 0.7, 0.7), label = r"$\mu \pm 2\sigma\equal {:.1f}\%$".format(stdDev2p * 100))
+        plt.fill_between(x1stdDev, pdf(x1stdDev), color = (0.9, 0.9, 0.9), label = r"$\mu \pm \sigma\equal {:.1f}\%$".format(stdDev1p * 100))
         plt.grid()
-        plt.title("Apogee PDF (ID: {})".format(self.id))
+        plt.title(r"Apogee PDF (ID: {}, $\mu = {:.1f}, \sigma = {:.1f}$)".format(self.id, mn, stdDev))
         plt.xlabel("Apogee [m]")
-        plt.plot(mn, 0, 'x', color = (1, 0, 0), label = "Mean")
+        plt.plot(mn, 0, 'x', color = (1, 0, 0), label = r"$\mu$")
+        plt.legend()
         plt.show()
+
+    def europa(self):
+        apogees = self.apogees[np.nonzero(self.apogees)]
+        mn = np.mean(apogees)
+        pdf = gaussian_kde(apogees)
+        x = np.linspace(np.min(apogees) - 200, np.max(apogees) + 200, 1000)
+
+        color = (np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]))
+        while color == (0, 0, 0) or color == (1, 1, 1):
+            color = (np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]))
+        plt.plot(x, pdf(x), color=color, label = self.id + "(mass: {:.2f}, cg: {:.2f})".\
+        format(self.rocket.getMass(0), -self.rocket.getCOM(0)[0]))
+        plt.plot(mn, 0, 'x', color=color)
+
+    def nigeria(self, x):
+        apogees = self.apogees[np.nonzero(self.apogees)]
+        pdf = gaussian_kde(apogees)
+        cdf = np.zeros(len(x))
+        for i in range(len(x)):
+            cdf[i] = np.trapz(pdf(x)[0:i], x[0:i])
+        return cdf
+
+    @staticmethod
+    def africa(x, lower, upper, goTrgt, goVal):
+        n = len(lower)
+        ids = []
+        ps = np.zeros(n, dtype=interp1d)
+        for i in range(n):
+            ids += [lower[i].id + "/" + upper[i].id]
+            psVals = lower[i].nigeria(x) * (1 - upper[i].nigeria(x))
+            ps[i] = interp1d(x, psVals)
+        goUpper = np.zeros(len(x))
+        goUpper.fill(goVal)
+        plt.fill_between(x, goUpper, color=(0.8, 0.8, 0.8))
+        for i in range(n):
+            if ps[i](goTrgt) < goVal:
+                color = (1, 0, 0)
+                status = "no go"
+            else:
+                color = (0, 0, 0)
+                status = "go"
+            plt.plot(x, ps[i](x), label=ids[i] + " ({})".format(status))
+            plt.plot(goTrgt, ps[i](goTrgt), 'x', color=color)
+        plt.ylabel("probabillity [decimal]")
+        plt.xlabel("apogee [m]")
+        plt.title("MonteCarlo CDFs (go={}, target={})".format(goVal, goTrgt))
+        plt.grid()
+        plt.legend()
+        plt.show()
+
+    @staticmethod
+    def africaBar(x, lower, upper, goTrgt, goVal):
+        n = len(lower)
+        ids = []
+        ps = np.zeros(n, dtype=interp1d)
+        for i in range(n):
+            ids += [lower[i].id + "/" + upper[i].id]
+            psVals = lower[i].nigeria(x) * (1 - upper[i].nigeria(x))
+            ps[i] = interp1d(x, psVals)
+        goUpper = np.zeros(len(x))
+        goUpper.fill(goVal)
+        probs = []
+        colors = []
+        for i in range(n):
+            prob = ps[i](goTrgt)
+            if prob < goVal:
+                color = (1, 0, 0)
+                status = "no go"
+            else:
+                color = (0, 1, 0)
+                status = "go"
+            probs += [prob]
+            colors += [color]
+        plt.ylabel("probabillity [decimal]")
+        plt.xlabel("Monte Carlo IDs")
+        plt.title("Go / No go (go={}, target={})".format(goVal, goTrgt))
+        xpos = np.arange(len(ids))
+        plt.bar(xpos, probs, color=colors)
+        plt.xticks(xpos, ids)
+        plt.setp(plt.gcf().gca().get_xticklabels(), rotation=15, horizontalalignment='right')
+        plt.show()
+
 
     def __str__(self):
         return "id:".ljust(20) + self.id + '\n' + \
