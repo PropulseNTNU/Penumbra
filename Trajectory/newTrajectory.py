@@ -1,6 +1,9 @@
+import sys
+sys.path.append('../Forces/')
 import Wind
 import Kinematics
 import Forces
+from Rocket1 import Airbrakes
 import numpy as np
 import scipy.linalg as splinalg
 from scipy.constants import g
@@ -39,15 +42,16 @@ def unwrapState(state):
 
 class Trajectory:
     def __init__(self, rocket, initialInclination, rampLength, simTime, dragDeviation = 0,
-    windObj = Wind.nullWind()):
+    windObj = Wind.nullWind(), air_brakes=Airbrakes(0,0,0)):
         # Integrator specs
         self.dt = 0.03 # temp
         self.timeArray = np.arange(0, simTime, self.dt)
         self.steps = len(self.timeArray)
         # Rocket object
         self.rocket = rocket
+        self.airbrakes = air_brakes
         # Initial state
-        self.initialInclination = initialInclination 
+        self.initialInclination = initialInclination
         self.initState, self.initialDirection = initialState(rocket, initialInclination)
         self.rampLength = rampLength
         # State vector and Trajectory data
@@ -119,12 +123,15 @@ class Trajectory:
         ax3.plot(t, -position[:,2], label='h', lw=2, c='g')
         ax3.grid()
         plt.figure()
-        ax1 = plt.subplot(111, xlabel='r [m]', ylabel=' h [m]')
-        ax1.plot(np.sqrt(position[:,0]**2+position[:,1]**2), -position[:,2], lw=2, c='r')
-        ax1.set_title('h vs. r')
-        ax1.grid()
-        ax1.axis('equal')
-        
+        #ax1 = plt.subplot(111, xlabel='lat. distance [m]', ylabel=' altitude [m]', xlim=(0,1000), ylim=(0,3100))
+        plt.plot(np.sqrt(position[:,0]**2+position[:,1]**2), -position[:,2], lw=3, c='r')
+        plt.plot([1800],[0], lw=0)
+        plt.title('altitude vs. lateral distance')
+        plt.xlabel('lat. distance [m]')
+        plt.ylabel('altitude [m]')
+        plt.grid()
+        plt.gcf().gca().set_aspect('equal')
+
         # Orientation
         plt.figure()
         plt.title('Orientation')
@@ -143,7 +150,7 @@ class Trajectory:
         ax1 = plt.subplot(414, xlabel='time [s]', ylabel='AoA [deg]')
         ax1.plot(t[15:], AoA[15:]*rad2deg, label='AoA', lw=2, c='k')
         ax1.grid()
-        
+
         # Linear Velocity
         plt.figure()
         ax1 = plt.subplot(311, ylabel='v_x [m/s]')
@@ -158,7 +165,7 @@ class Trajectory:
         ax3 = plt.subplot(313, xlabel='time [s]', ylabel='v_z [m/s]')
         ax3.plot(t, -linearVelocity[:,2], lw=2, c='g')
         ax3.grid()
-        
+
         # Forces
         plt.figure()
         ax1 = plt.subplot(311, ylabel='[N]')
@@ -185,7 +192,7 @@ class Trajectory:
         ax3.plot(t, gravity[:,2], label='gravity-z', lw=2, c='k')
         ax3.legend(loc='upper right')
         ax3.grid()
-        
+
         #Acceleration
         plt.figure()
         ax1 = plt.subplot(311, ylabel='a_x [m/s^2]')
@@ -200,7 +207,7 @@ class Trajectory:
         ax3 = plt.subplot(313, xlabel='time [s]', ylabel='a_z [m/s^2]')
         ax3.plot(t, -acceleration[:,2], lw=2, c='g')
         ax3.grid()
-        
+
         # Angular velocity
         plt.figure()
         ax1 = plt.subplot(311, ylabel='w_x [rad/s]')
@@ -218,7 +225,7 @@ class Trajectory:
         ax3.grid()
         ax3.legend(loc='upper right')
         plt.show()
-    
+
     def printTrajectoryStatistics(self):
         """
         :param rocket: [rocket object]
@@ -229,10 +236,10 @@ class Trajectory:
         if not self.simulationRun:
             print('Trajectory data is empty! Please run a simulation and try again..')
             exit(1)
-        
+
         x, y, z = self.position[:,0], self.position[:,1], self.position[:,2]
         vx, vy, vz = self.linearVelocity[:,0], self.linearVelocity[:,1], self.linearVelocity[:,2]
-    
+
         # Statistics
         index_apogee = np.argmax(-z)
         index_max_vertical_speed = np.argmax(-vz)
@@ -242,7 +249,8 @@ class Trajectory:
         max_vertical_speed = -vz[index_max_vertical_speed]/Forces.c
         time_at_maxspeed = self.timeArray[index_max_vertical_speed]
         burn_out = self.rocket.getMotor().getBurnTime()
-    
+        time_at_half_airBrakes_deployed = self.airbrakes.Time_brakes()
+
         print('\nTRAJECTORY STATISTICS:')
         print(33*'-')
         print('Max vertical speed: %1.2f Mach' %max_vertical_speed)
@@ -251,7 +259,12 @@ class Trajectory:
         print('Apogee: %1.0f m' %apogee)
         print('\t Time at apogee: %1.1f s' %apogee_time)
         print('Lateral distance traveled: %1.0f m' %lat_distance)
-    
+        print('Air brakes info:')
+        print('\tspeed at 10% deployment: %1.0f')
+        print('\tspeed at 20% deployment: %1.0f')
+        print('\tspeed at 40% deployment: %1.0f')
+        print('\tspeed at 80% deployment: %1.0f')
+
     # Private functions here
     def __eqOfMotion(self, state, t):
         rocket = self.rocket
@@ -275,8 +288,9 @@ class Trajectory:
         # Add wind to current rocket velocity to get total air velocity
         windVelocity = self.wind.getWindVector(-position[2], t)
         airVelocity = windVelocity - dPosition
+        airSpeed = np.linalg.norm(airVelocity)
         xAxisBody = RotationBody2Inertial[:,0]
-        dirWindVelocity = (airVelocity/(np.linalg.norm(airVelocity) + epsilon))
+        dirWindVelocity = (airVelocity/(airSpeed + epsilon))
         # definition of angle of attack
         AoA = np.arccos(np.dot(-dirWindVelocity, xAxisBody))
         # unit vector that points in drag direction (body coords.)
@@ -287,10 +301,11 @@ class Trajectory:
         dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
         # Forces in body coords
         aeroForces = rocket.getAeroForces(position, airVelocity, AoA)
-        drag = aeroForces[0]*dirDragBody
+        Cd_airbrakes = self.airbrakes.drag_coeff(position, t)
+        drag = aeroForces[0]*dirDragBody + Cd_airbrakes*airSpeed**2*dirDragBody
         lift = aeroForces[1]*dirLiftBody
         thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
-        # gravity in body coords    
+        # gravity in body coords
         gravityWorld = np.array([0, 0, rocket.getMass(t)*g])
         gravityBody = RotationInertial2Body @ gravityWorld
         # inertia matrix and coriolis matrix for equations of motion
@@ -318,8 +333,8 @@ class Trajectory:
         genVelocity = np.concatenate((linearVelocity, angularVelocity))
         rhs = genForceBody - CBody @ genVelocity
         dGeneralizedVelocity = np.linalg.solve(IBody, rhs)
-        dstate = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))        
-        
+        dstate = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
+
         return dstate, AoA, forceMatrix, windVelocity
 
     def __RK4(self):
@@ -329,7 +344,7 @@ class Trajectory:
         """
         # Initialize with initial conditions.
         state = self.initState
-    
+
         # Runge-Kutta algorithm
         for i in range(self.steps):
             t = self.timeArray[i]
@@ -337,11 +352,11 @@ class Trajectory:
             s2 = self.__eqOfMotion(state + self.dt/2*s1, t + self.dt/2)[0] # get dx only
             s3 = self.__eqOfMotion(state + self.dt/2*s2, t + self.dt/2)[0] # get dx only
             s4 = self.__eqOfMotion(state + self.dt*s3, t + self.dt)[0] # get dx only
-    
+
             dstate = (s1 + 2*s2 + 2*s3 + s4)/6
             state = state + self.dt*dstate
             self.__writeData(state, dstate, force, AoA, windVelocity, i)
-    
+
     def __writeData(self, state, dstate, force, AoA, windvelocity, time_index):
         pos, orien, linvel, angvel = unwrapState(state)
         RotationBody2Inertial = Kinematics.Ryzx(orien[0], orien[1], orien[2])
@@ -360,7 +375,7 @@ class Trajectory:
         self.thrust[time_index] = force[:, 3]
             # Wind
         self.windVelocities[time_index] = windvelocity
-        
+
     # get functions here
 
     # set functions here

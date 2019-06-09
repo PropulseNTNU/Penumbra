@@ -598,6 +598,20 @@ class Payload:
         width = find_parameter(file, "width")
         return Payload(eval(width))
 
+class Airbrakes:
+    def __init__(self, airbrake_area, n_brakes, T_brakes):
+        self.Cd_init = 0.5*airbrake_area*Forces.rho0*n_brakes
+        self.T_brakes = T_brakes
+
+    def drag_coeff(self, position, t):
+        exp = np.exp(20*(t-self.T_brakes))
+        Cd = self.Cd_init*exp/(1 + exp)*Forces.airDensity(position)/Forces.rho0
+        return Cd
+
+    def Time_brakes(self):
+        return self.T_brakes
+
+
 class RocketSimple:
     def __init__(self, nose, body, fin, numberOfFins, motor, payload, partsPlacement):
         if verbose: print("Initalizing rocket:")
@@ -663,7 +677,7 @@ class RocketSimple:
         self.__Xcp_fin = Xf
 
         if verbose: print("\tCalculating inertia matrix of rocket..")
-        # MOMENT OF INERTIA (about rocket axes with origin at COM, calculated with parallel axis thm)
+        # MOMENT OF INERTIA (about rocket axes with origin at Nosetip, calculated with parallel axis thm)
         noseMOI = nose.getInertiaMatrix() + np.diag([0, 1, 1])*nose.getMass()*nose.getLength()**2
         bodyMOI = body.getInertiaMatrix() + np.diag([0, 1, 1])*body.getMass()*nose.getLength()**2
         finMOI = self.__N*(fin.getInertiaMatrix() + (np.diag([1, 0, 0])*(body.getDiameter()/2 + y)**2 +
@@ -740,7 +754,7 @@ class RocketSimple:
         M = Mm + Ms
         self.__COM = com
         XcomMotor = self.__motorCOM
-
+        # Using definition of center of mass for rocket structure and motor.
         self.__rocketStructureCOM = (M*com - Mm*XcomMotor)/Ms
 
     def getCOMofParts(self):
@@ -838,7 +852,7 @@ class RocketSimple:
         print("Rocket Specifications at time %1.1f" % t)
         print(dots)
         print("Mass: %1.2f kg" % Mass)
-        print("Moment of inertia (about rocket axes with COM as origin) [kg*cm^2]:")
+        print("Moment of inertia (about rocket axes with nosetip as origin) [kg*cm^2]:")
         print(np.array2string(MOI*1e4, precision=1))
         print("Length: %1.1f cm" % (length*1e2))
         print("Transversal extension: %1.2f cm" % (max_extension*1e2))

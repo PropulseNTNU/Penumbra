@@ -9,13 +9,17 @@ Last edit: 10.03.2019
 import numpy as np
 from scipy.constants import R, g, atmosphere
 
-T0 = 27 + 273 # Temperature at sea level [K]
+T0 = 30 + 273 # Temperature at sea level [K]
 P0 = atmosphere # Air pressure at sea level [Pa]
 m = 29e-3  # Molar mass of Air [kg]
 rho0 = P0/(R*T0/m)  # Air density at sea level [kg/m^3]
 h = R*T0/(m*g)  # Height constant of Air ~ 1e4 [m]
 nu = 1.511e-5  # Kinematic viscosity of air [m^2/s]
 c = 343  # Speed of sound (at 293K) [m/s]
+
+# Calculate local air density
+def airDensity(position):
+    return rho0*np.exp(-position[2]/h)
 
 # Forces
 def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=True, deviation=0):
@@ -119,6 +123,7 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
     # Update Cd of rcoket object
     rocket.setCd(CD)
 
+# Simple Aero Model (SAM)
 def SAMdrag(rocket, position, linearVelocityWorld):
     """
         Assumptions:- AoA ~ 0
@@ -136,6 +141,7 @@ def SAMdrag(rocket, position, linearVelocityWorld):
 
     return k*speed**2
 
+# Simple Aero Model (SAM)
 def SAMlift(rocket, position, linearVelocityWorld, AoA):
     """
     :param rocket: [rocket class] The rocket object

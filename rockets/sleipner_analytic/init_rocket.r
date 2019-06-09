@@ -10,4 +10,4 @@ number_of_fins = 3
 
 Part placement [meters]:
 fin_placement = -1800e-3
-payload_placement = 0
+payload_placement = -400e-3
