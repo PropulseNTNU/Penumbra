@@ -125,9 +125,9 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     dirLiftBody = np.sin(AoA)*np.array([1, 0, 0]) + np.cos(AoA)*dirProjectedDragBody
     # Get drag and lift for current state
     ### BOOKMARK
-    #Forces.updateCd(rocket, position, linearVelocity, AoA, rocket.getCompressibilityState(), deviation = dragDeviation)
+    # Forces.updateCd(rocket, position, linearVelocity, AoA, rocket.getCompressibilityState(), deviation = dragDeviation)
     aeroForces = rocket.getAeroForces(position, airVelocity, AoA)
-    drag = aeroForces[0]*dirDragBody + np.array([-Cbrakes*airSpeed**2,0,0])
+    drag = aeroForces[0]*(dirDragBody) + np.array([-Cbrakes*airSpeed**2,0,0])
     lift = aeroForces[1]*dirLiftBody
     thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
     gravityBody = RotationInertial2Body @ gravityWorld

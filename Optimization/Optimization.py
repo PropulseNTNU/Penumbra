@@ -9,15 +9,13 @@ import sys
 sys.path.append("../Forces/")
 sys.path.append("../Rocket/")
 sys.path.append("../Trajectory/")
-sys.path.append("../Visual/")
 # Import of external libs
 import numpy as np
 import matplotlib.pyplot as plt
 # Import of internal libs
 import Wind
 from Rocket1 import RocketSimple
-import Trajectory
-import TrajectoryWithBrakes as traBrakes
+import TrajectoryWithBrakes as Trajectory
 import Kinematics
 import datetime as dt
 from scipy.stats.kde import gaussian_kde
@@ -55,7 +53,7 @@ class ShootingOptimz:
         # Loop
         apogee = targetApogee + 2 * tol
         while(np.abs(targetApogee - apogee) > tol):
-            apogee = np.max(-traBrakes.calculateTrajectoryWithAirbrakes(self.rocket,\
+            apogee = np.max(-Trajectory.calculateTrajectoryWithAirbrakes(self.rocket,\
             self.initialInclination, self.launchRampLength, self.timeStep,\
             self.simulationTime, t, self.Cbrakes_in, self.dragDev,\
             self.windObj)[1][:,2])
@@ -91,18 +89,18 @@ class ShootingOptimz:
                 b = a
             t += a * dt
 
-
-
 class MonteCarlo:
     def __init__(self, n, rocket, params, thrustFreq = 0, thrustDev = 0,\
     dragDev = 0, wind = Wind.nullWind(), doSave = True, verbose = True,\
-    Tbrakes = 60, Cbrakes_in = 0):
+    Tbrakes = 60, Cbrakes_in = 0, target = 3048, type = 'default'):
         self.n = n
-        self.apogees = np.zeros(n)
+        self.type = type
+        self.target = target
         self.deltas = np.zeros(n)
         self.params = params
         self.rocket = rocket
         self.rocket.getMotor().setStochasticParams(thrustFreq, thrustDev)
+        self.rocket.setDragDev(dragDev)
         self.thrustFreq = thrustFreq
         self.thrustDev = thrustDev
         self.dragDev = dragDev
@@ -113,9 +111,19 @@ class MonteCarlo:
         self.verbose = verbose
         self.Tbrakes = Tbrakes
         self.Cbrakes_in = Cbrakes_in
+        if type == 'default':
+            self.apogees = np.zeros(n)
+            self.run = self.run_default
+        if type == 'gng':
+            self.abmax_apogees = np.zeros(n)
+            self.abmin_apogees = np.zeros(n)
+            self.Tbrakes = self.rocket.getMotor().getBurnTime()
+            self.run = self.run_gng
+            self.successArr = np.zeros(n)
+            self.success = 0
         if self.verbose: print("Monte")
 
-    def showProgess(self):
+    def showProgess_default(self):
         scaledown = 1.48
         fullbar = int(100 // scaledown)
         progress = int((self.i)/self.n * 100)
@@ -123,13 +131,15 @@ class MonteCarlo:
         meanApogee = np.mean(self.apogees[np.nonzero(self.apogees)])
         meanDelta = np.mean(self.deltas[np.nonzero(self.deltas)])
         timeLeft = meanDelta * (self.n - self.i)
+        stdDevApogee = np.std(self.apogees[np.nonzero(self.apogees)])
 
         os.system("cls")
         print(\
         "Iterations".ljust(20) + \
         "Progress".ljust(20) + \
         "Time left".ljust(20) + \
-        "Mean apogee".ljust(20))
+        "Mean apogee".ljust(20) + \
+        "Std. deviation".ljust(20))
 
         print('-'*71)
 
@@ -137,28 +147,67 @@ class MonteCarlo:
         "{} / {}".format(self.i, self.n).ljust(20) + \
         "{}%".format(progress).ljust(20) + \
         "{}".format(str(dt.timedelta(seconds=int(timeLeft)))).ljust(20) + \
-        "{}m".format(round(meanApogee, 2)).ljust(20))
+        "{}m".format(round(meanApogee, 2)).ljust(20) + \
+        "{}m".format(round(stdDevApogee, 2)).ljust(20))
         print('\n' + "  " + pbar*chr(9619) + (fullbar - pbar)*chr(9617) + '\n')
 
         print(self)
 
+    def showProgess_gng(self):
+        scaledown = 1.48
+        fullbar = int(100 // scaledown)
+        progress = int((self.i)/self.n * 100)
+        pbar = int(progress // scaledown)
+        abmax_meanApogee = np.mean(self.abmax_apogees[np.nonzero(self.abmax_apogees)])
+        abmin_meanApogee = np.mean(self.abmin_apogees[np.nonzero(self.abmin_apogees)])
+        meanRange = np.abs(abmin_meanApogee - abmax_meanApogee)
+        meanDelta = np.mean(self.deltas[np.nonzero(self.deltas)])
+        timeLeft = meanDelta * (self.n - self.i)
+        success = self.success
 
-    def run(self):
+        os.system("cls")
+        print(\
+        "Iterations".ljust(20) + \
+        "Progress".ljust(20) + \
+        "Time left".ljust(20) + \
+        "Mean apogee (ab = 0)".ljust(20) + \
+        "Mean apogee (ab = C)".ljust(20) + \
+        "Mean range".ljust(20) + \
+        "Success".ljust(20))
+
+        print('-'*71)
+
+        print(\
+        "{} / {}".format(self.i, self.n).ljust(20) + \
+        "{}%".format(progress).ljust(20) + \
+        "{}".format(str(dt.timedelta(seconds=int(timeLeft)))).ljust(20) + \
+        "{}m".format(round(abmin_meanApogee, 2)).ljust(20) + \
+        "{}m".format(round(abmax_meanApogee, 2)).ljust(20) + \
+        #"{}m".format(round(self.abmin_apogees[self.i - 1], 2)).ljust(20) + \
+        #"{}m".format(round(self.abmax_apogees[self.i - 1], 2)).ljust(20) + \
+        "{}m".format(round(meanRange, 2)).ljust(20) + \
+        "{}%".format(round(success*100, 2)).ljust(20))
+        print('\n' + "  " + pbar*chr(9619) + (fullbar - pbar)*chr(9617) + '\n')
+
+        print(self)
+
+    def run_default(self):
         global interrupted
         #os.system("cls")
         def signal_handler(signal, frame):
             global interrupted
             print("Process safely interrupted")
             interrupted = True
+            return (self.i)/self.n * 100
 
         signal.signal(signal.SIGINT, signal_handler)
 
         while self.i < self.n and not interrupted:
             T0 = dt.datetime.now()
-            self.rocket.getMotor().refresh()
+            self.rocket.refresh()
             self.wind.refresh()
 
-            trajectory = traBrakes.calculateTrajectoryWithAirbrakes(self.rocket,\
+            trajectory = Trajectory.calculateTrajectoryWithAirbrakes(self.rocket,\
             *self.params[0:4], windObj = self.wind,\
             dragDeviation = self.dragDev, Tbrakes = self.Tbrakes,\
             Cbrakes_in = self.Cbrakes_in)
@@ -174,10 +223,66 @@ class MonteCarlo:
 
             self.i += 1
 
-            if self.verbose: self.showProgess()
+            if self.verbose: self.showProgess_default()
 
         interrupted = False
         if self.verbose: print("Process terminated, id: {}".format(self.id))
+        return (self.i)/self.n * 100
+
+    def run_gng(self):
+        global interrupted
+        #os.system("cls")
+        def signal_handler(signal, frame):
+            global interrupted
+            print("Process safely interrupted")
+            interrupted = True
+            return (self.i)/self.n * 100
+
+        signal.signal(signal.SIGINT, signal_handler)
+
+        while self.i < self.n and not interrupted:
+            T0 = dt.datetime.now()
+            self.rocket.refresh()
+            self.wind.refresh()
+
+            abmin_trajectory = Trajectory.calculateTrajectoryWithAirbrakes(self.rocket,\
+            *self.params[0:4], windObj = self.wind,\
+            dragDeviation = self.dragDev, Tbrakes = 10000,\
+            Cbrakes_in = 0)
+
+            abmax_trajectory = Trajectory.calculateTrajectoryWithAirbrakes(self.rocket,\
+            *self.params[0:4], windObj = self.wind,\
+            dragDeviation = self.dragDev, Tbrakes = self.Tbrakes,\
+            Cbrakes_in = self.Cbrakes_in)
+
+            self.abmin_apogees[self.i] = np.max(-abmin_trajectory[1][:,2])
+            self.abmax_apogees[self.i] = np.max(-abmax_trajectory[1][:,2])
+
+            if self.abmin_apogees[self.i] > self.target and\
+            self.abmax_apogees[self.i] < self.target:
+                self.successArr[self.i] = 1
+
+            self.success = np.sum(self.successArr) / (self.i + 1)
+
+            if self.doSave:
+                self.save()
+
+            Tf = dt.datetime.now()
+            self.deltas[self.i] = (Tf - T0).total_seconds()
+
+            self.i += 1
+
+            if self.verbose: self.showProgess_gng()
+
+        interrupted = False
+        if self.verbose: print("Process terminated, id: {}".format(self.id))
+        return (self.i)/self.n * 100
+
+    def getMeanDelta():
+        return self.meanDelta
+
+    def getDeltas():
+        return self.deltas
 
     @staticmethod
     def fromFile(id):
@@ -224,17 +329,19 @@ class MonteCarlo:
         plt.legend()
         plt.show()
 
-    def europa(self):
+    def europa(self, c=0):
         apogees = self.apogees[np.nonzero(self.apogees)]
         mn = np.mean(apogees)
         pdf = gaussian_kde(apogees)
         x = np.linspace(np.min(apogees) - 200, np.max(apogees) + 200, 1000)
 
-        color = (np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]))
-        while color == (0, 0, 0) or color == (1, 1, 1):
+        if c == 0:
             color = (np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]))
-        plt.plot(x, pdf(x), color=color, label = self.id + "(mass: {:.2f}, cg: {:.2f})".\
-        format(self.rocket.getMass(0), -self.rocket.getCOM(0)[0]))
+            while color == (0, 0, 0) or color == (1, 1, 1):
+                color = (np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]), np.random.choice([0, 0.5, 1]))
+        else:
+            color = c
+        plt.plot(x, pdf(x), color=color, label = self.id)
         plt.plot(mn, 0, 'x', color=color)
 
     def nigeria(self, x):
@@ -311,5 +418,6 @@ class MonteCarlo:
         "n:".ljust(20) + str(self.n) + '\n' + \
         "Thrust deviation:".ljust(20) + str(self.thrustDev) + '\n' + \
         "Thrust frequency:".ljust(20) + str(self.thrustFreq) + '\n' + \
-        "Drag deviation:".ljust(20) + str(self.dragDev) + 2*'\n' + \
+        "Drag deviation:".ljust(20) + str(self.dragDev) + '\n' + \
+        "Type:".ljust(20) + str(self.type) + 2*'\n' + \
         self.wind.__str__() + '\n'

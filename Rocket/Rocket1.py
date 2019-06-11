@@ -599,8 +599,10 @@ class Payload:
         return Payload(eval(width))
 
 class RocketSimple:
-    def __init__(self, nose, body, fin, numberOfFins, motor, payload, partsPlacement):
+    def __init__(self, nose, body, fin, numberOfFins, motor, payload, partsPlacement, dragDev = 0):
         if verbose: print("Initalizing rocket:")
+        self.__dragDev = dragDev
+        self.__k = np.random.normal(scale=dragDev)
         self.__partsPlacement = partsPlacement
         self.__rocketStructure = np.array([nose, payload, body, fin])
         self.__rocketMotor = motor
@@ -683,6 +685,14 @@ class RocketSimple:
         Forces.updateCd(self, [0, 0, 0], [0, 0, 0], 0)
         if verbose: print("Rocket initialized!\n")
         if verbose: self.printSpecifications(0, 0) # Specs at AoA = 0 deg.
+
+    def setDragDev(self, dragDev):
+        self.__dragDev = dragDev
+        self.__k = np.random.normal(scale=dragDev)
+
+    def refresh(self):
+        self.__k = np.random.normal(scale=self.__dragDev)
+        self.getMotor().refresh()
 
     # Rocket parts
     def getNose(self):
@@ -813,7 +823,7 @@ class RocketSimple:
 
     # Set functions
     def setCd(self, Cd):
-        self.__Cd = Cd
+        self.__Cd = Cd + self.__k
 
     # auxiliary
     def printSpecifications(self, t, AoA=0):

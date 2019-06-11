@@ -18,7 +18,7 @@ nu = 1.511e-5  # Kinematic viscosity of air [m^2/s]
 c = 343  # Speed of sound (at 293K) [m/s]
 
 # Forces
-def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=True, deviation=0):
+def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=True):
     """
     Reference:
     -"Estimating the dynamic and aerodynamic paramters of
@@ -105,7 +105,7 @@ def updateCd(rocket, position, linearVelocityBody, AoA, enable_compressibility=T
     # total zero AoA drag coefficient (eq 48)
     CD_0 = Cd_fb + Cd_b + Cd_f + Cd_int
     # FINAL CD
-    CD = CD_0 + Cd_bA + Cd_fA + deviation
+    CD = CD_0 + Cd_bA + Cd_fA
 
     # Compressibility:
     if enable_compressibility:
