@@ -22,7 +22,10 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectoryWithAirbrakes(rocket, initialInclination, launchRampLength, timeStep, simulationTime, Tbrakes, Cbrakes_in, dragDeviation = 0, windObj = Wind.nullWind(), trim = False):
+def calculateTrajectoryWithAirbrakes(rocket, initialInclination, 
+                                     launchRampLength, timeStep, simulationTime, 
+                                     Tbrakes, Cbrakes_in, dragDeviation = 0, 
+                                     windObj = Wind.nullWind(), trim = False):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
     # x is the state of the rocket
@@ -36,8 +39,8 @@ def calculateTrajectoryWithAirbrakes(rocket, initialInclination, launchRampLengt
     gravity = np.array([forces[i][:,2] for i in range(n)])
     thrust = np.array([forces[i][:,3] for i in range(n)])
     # Transform velocity to world frame for plot
-    velocity = np.zeros(shape=(len(t),3)) # in world frame
-    for i in range(len(t)):
+    velocity = np.zeros(shape=(n,3)) # in world frame
+    for i in range(n):
         RotationBody2Inertial = Kinematics.Ryzx(euler[i][0], euler[i][1], euler[i][2])
         velocity[i] = RotationBody2Inertial @ linearVelocity[i]
 
@@ -67,13 +70,21 @@ def initialState(rocket, initialInclination):
     initialLinearVelocity, initialAngularVelocity))
     return (x0, initialDirection)
 
-def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation, Tbrakes, Cbrakes_in):
+def integrateEquationsMotion(rocket, x0, launchRampLength, 
+                             initialDirection, timeStep, simulationTime, 
+                             windObj, dragDeviation, Tbrakes, Cbrakes_in):
     t = np.arange(0, simulationTime + timeStep, timeStep)
     x = np.zeros(shape=(len(t),len(x0)))
-    sol, AoA, force, windVelocities = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj, dragDeviation, Tbrakes, Cbrakes_in))
+    sol, AoA, force, windVelocities = RK4(equationsMotion, 0, simulationTime, 
+                                          timeStep, x0, 
+                                          RHS_args=(rocket, launchRampLength, 
+                                                    initialDirection, windObj, 
+                                                    dragDeviation, Tbrakes, 
+                                                    Cbrakes_in))
     return t, sol, AoA, force, windVelocities
 
-def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, dragDeviation, Tbrakes, Cbrakes_in):
+def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, 
+                    dragDeviation, Tbrakes, Cbrakes_in):
     """
     x: [np.array] the current state of rocket
     t: [float] at time t
