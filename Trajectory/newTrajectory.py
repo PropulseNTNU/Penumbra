@@ -44,7 +44,7 @@ class Trajectory:
     def __init__(self, rocket, initialInclination, rampLength, simTime, dragDeviation = 0,
     windObj = Wind.nullWind(), air_brakes=Airbrakes(0,0,0)):
         # Integrator specs
-        self.dt = 0.03 # temp
+        self.dt = 0.04 # temp
         self.timeArray = np.arange(0, simTime, self.dt)
         self.steps = len(self.timeArray)
         # Rocket object
@@ -246,24 +246,28 @@ class Trajectory:
         apogee = -z[index_apogee]
         apogee_time = self.timeArray[index_apogee]
         lat_distance = np.max(np.sqrt(x**2 + y**2))
-        max_vertical_speed = -vz[index_max_vertical_speed]/Forces.c
+        max_vertical_speed = -vz[index_max_vertical_speed]
         time_at_maxspeed = self.timeArray[index_max_vertical_speed]
         burn_out = self.rocket.getMotor().getBurnTime()
-        time_at_half_airBrakes_deployed = self.airbrakes.Time_brakes()
+        time_1_10_deployed = -0.11 + self.airbrakes.Time_brakes()
+        time_1_4_deployed  = -0.055 + self.airbrakes.Time_brakes()
+        time_1_2_deployed = self.airbrakes.Time_brakes()
+        v_1_10_deployed = np.linalg.norm(self.linearVelocity[int(time_1_10_deployed/self.dt)])
+        v_1_4_deployed = np.linalg.norm(self.linearVelocity[int(time_1_4_deployed/self.dt)])
+        v_1_2_deployed = np.linalg.norm(self.linearVelocity[int(time_1_2_deployed/self.dt)])
 
         print('\nTRAJECTORY STATISTICS:')
         print(33*'-')
-        print('Max vertical speed: %1.2f Mach' %max_vertical_speed)
+        print('Max vertical speed: %1.1f m/s' %max_vertical_speed)
         print('\t Time at max speed: %1.1f s' %time_at_maxspeed)
         print('\t Time at burnout: %1.1f s' %burn_out)
+        print('Air brakes info:')
+        print('\tspeed at 10%% deployment: %1.1f m/s' %v_1_10_deployed)
+        print('\tspeed at 25%% deployment: %1.1f m/s' %v_1_4_deployed)
+        print('\tspeed at 50%% deployment: %1.1f m/s' %v_1_2_deployed)
         print('Apogee: %1.0f m' %apogee)
         print('\t Time at apogee: %1.1f s' %apogee_time)
         print('Lateral distance traveled: %1.0f m' %lat_distance)
-        print('Air brakes info:')
-        print('\tspeed at 10% deployment: %1.0f')
-        print('\tspeed at 20% deployment: %1.0f')
-        print('\tspeed at 40% deployment: %1.0f')
-        print('\tspeed at 80% deployment: %1.0f')
 
     # Private functions here
     def __eqOfMotion(self, state, t):
