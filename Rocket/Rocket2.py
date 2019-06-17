@@ -2,7 +2,7 @@
 The definition of the CFD rocket
 
 Version: WIP
-Last edit: 13.03.2019
+Last edit: 12.06.2019
 
 --Propulse NTNU--
 """
@@ -19,7 +19,6 @@ from lib.File_utilities import find_parameter, unwrap_CFD_report
 font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}
 plt.rc('font', **font)
 plt.rcParams['text.latex.preamble'] = [r'\boldmath']
-
 
 class RocketCFD:
     def __init__(self, *args):
@@ -42,19 +41,17 @@ class RocketCFD:
         self.__moment = args[7]
         self.__freeAirStreamSpeeds = args[8]
         self.__AoAarray = args[9]
-
 # =============================================================================
 #         # Create rotation matrix for all AoA
 #         def rotationMatrix(AoA):
 #             sa, ca = np.sin(AoA*np.pi/180.0), np.cos(AoA*np.pi/180.0)
 #             return np.array([[ca, sa],[-sa, ca]])
-# 
+#      
 #         # Initialize aeroforces (a 2xn matrix with drag as row 1 and lift as row 2)
 #         for i in range(len(self.__AoAarray)):
 #             rotMat = rotationMatrix(self.__AoAarray[i])
 #             self.__aeroForces[:,i] = rotMat@self.__aeroForces[:,i]
 # =============================================================================
-
         print('\tInterpolating the drag force..')
         self.__Dragforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__drag)
         print('\tInterpolating the lift force..')
@@ -134,7 +131,7 @@ class RocketCFD:
         Fl = F[1]
         M = self.getMomentAboutCOM(position, velocity, AoA)
         COM_0 = self.getCOM(0)
-        COPx = COM_0[0] - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA))
+        COPx = COM_0[0] - M/(Fl*np.cos(AoA) + Fd*np.sin(AoA) + 1e-10)
         COPx = COPx[0]
         return np.array([COPx, 0, 0])
 
@@ -142,8 +139,11 @@ class RocketCFD:
         return self.__AoAarray, self.__freeAirStreamSpeeds, self.__drag, self.__lift, self.__moment
     
     def getStabilityMargin(self, position, velocity, AoA, t=0):
-        COM = self.getCOM(t)
-        COP = self.getCOP(position, velocity, AoA)
+        """
+        Stability margin in units of body diameters (body calibers)
+        """
+        COM = self.getCOM(t)[0]
+        COP = self.getCOP(position, velocity, AoA)[0]
         return COM - COP
 
     def compressibleFlow(self, state):
@@ -225,59 +225,6 @@ class RocketCFD:
         plt.show()
         print('Plotting done!\n')
 
-# =============================================================================
-#     @staticmethod
-#     def from_file_without_AoAspeed(initFile, sampleReport, path_to_file=''):
-#         """
-#         Create an instance of CFDrocket by reading some files
-# 
-#         example: initFile.dot as initFile, myMotor.dot as motor and CFD files as drag.dot, lift.dot, moments.dot
-#                             -stored in folder 'myRocket2' (see 'Tests' folder)
-# 
-#                 in 'initFile.dot':
-# 
-#                 initial_mass = value of initial mass
-#                 initial_moi = Ixx, Iyy, Izz
-#                 initial_com = x-value of initial COM (this one is negative!)
-#                 length = value of rocket total length
-#                  motor = myMotor.dot
-# 
-#                 myRocket = Rocket.from_file('initFile.dot', 'sample-report.dot',
-#                                             'myRocket2/')
-# 
-#         :param initFile: The file with content specified above
-#         :param sampleReport: The CFD file with aero moments about COM.
-#                             Add sampling period, alpha_max, delta_v, v0 values to bottom of sampleReport:
-#                                             period = ..
-#                                             alpha_max = ..
-#                                             .
-#                                             .
-#                                             .
-# 
-#         :param path_to_file: The path to the files above relative to current path (none by default)
-# 
-#         return: A rocket instance with specs from initFile and CFD.
-#         """
-#         path = path_to_file + initFile
-#         initMass = find_parameter(path, 'initial_mass')  # in kilo grams
-#         initMOI = find_parameter(path, 'initial_moi')
-#         initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in kg*m^2
-#         initCOM = find_parameter(path, 'initial_com') # in meters
-#         length = find_parameter(path, 'length') # in meters
-#         motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
-# 
-#         path = path_to_file + sampleReport
-#         T = find_parameter(path, 'period')
-#         alpha_max = find_parameter(path, 'alpha_max') # In degrees
-#         delta_v = find_parameter(path, 'delta_v')  # In mach
-#         v0 = find_parameter(path, 'v0') # In mach
-#         alpha, air_speed, drag, lift, moment = unwrap_report1(path,
-#                                                               int(T), float(alpha_max), float(delta_v), float(v0))
-# 
-#         return RocketCFD(float(initMass), initMOI, float(initCOM), float(length), motor, air_speed,
-#                       alpha, drag, lift,
-#                       moment)
-# =============================================================================
     
     @staticmethod
     def from_file(initFile, drag_report, lift_report, moment_report, path_to_file=''):

@@ -515,7 +515,6 @@ class Motor:
         timeList = np.arange(self.__timeArray[0], self.__burnTime + dt, dt)
         thrustArray = self.__thrustFunction(timeList)
         propellantMassArray = self.__propellantMassList
-        COMarray = np.array([self.getCOM(t)[0] for t in timeList])
         # PLOT FORCE
         plt.figure()
         ax1 = plt.subplot(211, xlabel='time [s]', ylabel='[N]')
@@ -530,12 +529,6 @@ class Motor:
         ax2.grid()
         ax2.legend(loc='best')
         plt.subplots_adjust(hspace=0.5)
-        # PLOT COM OVER TIME
-        plt.figure()
-        plt.plot(timeList, COMarray*100, label='COM', c='r', lw='2')
-        plt.title('COM of %s during burn phase, length %1.1f cm' % (self.__name, self.__length*100))
-        plt.grid()
-        plt.legend(loc='best')
         if show:
             plt.show()
 
@@ -731,7 +724,7 @@ class RocketSimple:
 
     def getLength(self):
         return self.__length
-
+    
     def getTransversalExtension(self):
         "The distance from center of body to fin tip"
         return self.__width
@@ -772,6 +765,9 @@ class RocketSimple:
         return np.array([COP0, 0, 0])
 
     def getStabilityMargin(self, position, velocity, AoA, t=0):
+        """
+        Stability margin in units of body diameters (body calibers)
+        """
         COM = self.getCOM(t)[0]
         COP = self.getCOP(position, velocity, AoA)[0]
         return COM - COP
