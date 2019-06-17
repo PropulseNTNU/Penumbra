@@ -1,20 +1,11 @@
-Mass properties of Propulse Rocket Sim v.3
-     Configuration: Default
-     Coordinate system: -- default --
+Sleipner rocket
 
-Initial mass of rocket: ( grams )
-initial_mass = 27283e-3
-
-Center of mass: ( millimeters )
-initial_com = -1438e-3
-
-Length of rocket: ( millimeters )
-length = 2500e-3
+initial_mass = 26275.48e-3
+initial_com = -1650.4e-3
+length = 2450e-3
 
 Moments of inertia: ( grams *  square millimeters )
 Taken at the center of mass and aligned along principle axes.
-initial_moi = 0.11875, 16.188, 16.188
+initial_moi = 99020331.80e-9, 12567391459.70e-9, 12570316681.05e-9
 
-Motor:
 motor = ../motors/CesaroniM1450.dot
-
