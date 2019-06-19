@@ -17,4 +17,4 @@ def airbrakes_main(height, acc, dt):
     u, rieman_sum = control.controller(error, kp, ki, rieman_sum, dt)
     u += 30
     #prev_u = control.test_modifications(u, prev_u, dt)
-    return u, estimated_h, estimated_v, error
+    return u#, estimated_h, estimated_v, error
