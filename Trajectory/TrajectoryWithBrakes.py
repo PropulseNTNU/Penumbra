@@ -22,10 +22,9 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectoryWithAirbrakes(rocket, initialInclination,
-                                     launchRampLength, timeStep, simulationTime,
-                                     Tbrakes = 1e30, Cbrakes_in = 0, dragDeviation = 0, 
-                                     windObj = Wind.nullWind(), trim = False):
+def calculateTrajectoryWithAirbrakes(rocket, initialInclination,\
+launchRampLength, timeStep, simulationTime, Tbrakes = 1e30, Cbrakes_in = 0,\
+dragDeviation = 0,windObj = Wind.nullWind(), trim = False):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
     # x is the state of the rocket
@@ -160,7 +159,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj,
         totalMoment = np.array([0, 0, 0])
     else:
         # After launch ramp, allow it to rotate (now calculating torques about COM)
-        armAero = rocket.getCOP(position, airVelocity, AoA) - rocket.getCOM(t)
+        armAero = rocket.getCOP(position, airVelocity, AoA, t) - rocket.getCOM(t)
         totalMoment = np.cross(armAero, drag + lift)
     genForceBody = H.T @ np.concatenate((totalForce, totalMoment))
     # find dx
