@@ -37,14 +37,14 @@ initialInclination = 1e-7
 rampLength = 5.2
 timeStep = 0.03
 simTime = 30
-total_ab_area = 0.006336
 windObj = Wind.pinkWind(simTime, [1.5, 1.9], alt0 = 1.5, intensity = 0.1)
 
 params = [initialInclination, rampLength, timeStep, simTime]
 
 def control_function(t, r, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
-    print(airbrakes_main(-r[2], -rdotdot[2], timeStep))
-    return Cbrakes_in*(airbrakes_main(-r[2], -rdotdot[2], timeStep) / 100)
+    a = (airbrakes_main(-r[2], -rdotdot[2], timeStep))
+    print(a)
+    return Cbrakes_in*(a / 100)
 
 def main():
     C = 0.001554391452
