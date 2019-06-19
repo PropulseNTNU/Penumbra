@@ -18,19 +18,23 @@ import scipy.linalg as splinalg
 import scipy.integrate as spintegrate
 import Kinematics
 import Forces
-
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
+def default_conFunc(t, r, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
+    return Cbrakes_in*np.exp(20*(t-Tbrakes))/(1+np.exp(20*(t-Tbrakes)))
+
+rdotdot = np.array([0, 0, 0])
+
 def calculateTrajectoryWithAirbrakes(rocket, initialInclination,\
 launchRampLength, timeStep, simulationTime, Tbrakes = 1e30, Cbrakes_in = 0,\
-dragDeviation = 0,windObj = Wind.nullWind(), trim = False):
+dragDeviation = 0,windObj = Wind.nullWind(), trim = False, conFunc = default_conFunc, lookuptable = []):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
     # x is the state of the rocket
     # x = [position, quaternion, linear velocity, angular velocity]
     (x0, initialDirection) = initialState(rocket, initialInclination)
-    t, x, AoA, forces, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation, Tbrakes, Cbrakes_in)
+    t, x, AoA, forces, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation, Tbrakes, Cbrakes_in, conFunc, lookuptable)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
     n = len(t)
     drag = np.array([forces[i][:,0] for i in range(n)])
@@ -71,7 +75,7 @@ def initialState(rocket, initialInclination):
 
 def integrateEquationsMotion(rocket, x0, launchRampLength,
                              initialDirection, timeStep, simulationTime,
-                             windObj, dragDeviation, Tbrakes, Cbrakes_in):
+                             windObj, dragDeviation, Tbrakes, Cbrakes_in, conFunc, lookuptable):
     t = np.arange(0, simulationTime + timeStep, timeStep)
     x = np.zeros(shape=(len(t),len(x0)))
     sol, AoA, force, windVelocities = RK4(equationsMotion, 0, simulationTime,
@@ -79,11 +83,11 @@ def integrateEquationsMotion(rocket, x0, launchRampLength,
                                           RHS_args=(rocket, launchRampLength,
                                                     initialDirection, windObj,
                                                     dragDeviation, Tbrakes,
-                                                    Cbrakes_in))
+                                                    Cbrakes_in, conFunc, lookuptable))
     return t, sol, AoA, force, windVelocities
 
 def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj,
-                    dragDeviation, Tbrakes, Cbrakes_in):
+                    dragDeviation, Tbrakes, Cbrakes_in, conFunc, lookuptable):
     """
     x: [np.array] the current state of rocket
     t: [float] at time t
@@ -97,7 +101,12 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj,
 
     return: dx, AoA, forceMatrix
     """
-    Cbrakes = Cbrakes_in*np.exp(20*(t-Tbrakes))/(1+np.exp(20*(t-Tbrakes)))
+    global rdotdot
+
+    r = x[0:3]
+    rdot = x[7:10]
+    Cbrakes = conFunc(t, r, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable)
+    #print(Cbrakes)
 
     windVelocity = windObj.getWindVector(-x[2], t)
     position = x[0:3]
@@ -167,6 +176,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj,
     rhs = genForceBody - CBody @ genVelocity
     dGeneralizedVelocity = np.linalg.solve(IBody, rhs)
     dx = np.concatenate((dPosition, dQuaternion, dGeneralizedVelocity))
+    rdotdot = dx[7:10]
 
     return dx, AoA, forceMatrix, windVelocity
 
