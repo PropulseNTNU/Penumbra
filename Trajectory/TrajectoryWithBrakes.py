@@ -22,9 +22,9 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectoryWithAirbrakes(rocket, initialInclination, 
-                                     launchRampLength, timeStep, simulationTime, 
-                                     Tbrakes, Cbrakes_in, dragDeviation = 0, 
+def calculateTrajectoryWithAirbrakes(rocket, initialInclination,
+                                     launchRampLength, timeStep, simulationTime,
+                                     Tbrakes = 1e30, Cbrakes_in = 0, dragDeviation = 0, 
                                      windObj = Wind.nullWind(), trim = False):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
@@ -70,20 +70,20 @@ def initialState(rocket, initialInclination):
     initialLinearVelocity, initialAngularVelocity))
     return (x0, initialDirection)
 
-def integrateEquationsMotion(rocket, x0, launchRampLength, 
-                             initialDirection, timeStep, simulationTime, 
+def integrateEquationsMotion(rocket, x0, launchRampLength,
+                             initialDirection, timeStep, simulationTime,
                              windObj, dragDeviation, Tbrakes, Cbrakes_in):
     t = np.arange(0, simulationTime + timeStep, timeStep)
     x = np.zeros(shape=(len(t),len(x0)))
-    sol, AoA, force, windVelocities = RK4(equationsMotion, 0, simulationTime, 
-                                          timeStep, x0, 
-                                          RHS_args=(rocket, launchRampLength, 
-                                                    initialDirection, windObj, 
-                                                    dragDeviation, Tbrakes, 
+    sol, AoA, force, windVelocities = RK4(equationsMotion, 0, simulationTime,
+                                          timeStep, x0,
+                                          RHS_args=(rocket, launchRampLength,
+                                                    initialDirection, windObj,
+                                                    dragDeviation, Tbrakes,
                                                     Cbrakes_in))
     return t, sol, AoA, force, windVelocities
 
-def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, 
+def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj,
                     dragDeviation, Tbrakes, Cbrakes_in):
     """
     x: [np.array] the current state of rocket

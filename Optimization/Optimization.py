@@ -29,70 +29,63 @@ from scipy.interpolate import interp1d
 verbose = True
 interrupted = False
 
-class ShootingOptimz:
-    def __init__(self, rocket, initialInclination, rampLength, timeStep, simTime, Cbrakes_in, windObj = Wind.nullWind(), thrustFreq = 0, thrustDev = 0, dragDev = 0):
-        self.rocket = rocket
-        self.initialInclination = initialInclination
-        self.launchRampLength = rampLength
-        self.timeStep = timeStep
-        self.simulationTime = simTime
-        #self.Tbrakes = Tbrakes
-        self.Cbrakes_in = Cbrakes_in
-        self.windObj = windObj
-        self.thrustFreq = thrustFreq
-        self.thrustDev = thrustDev
-        self.dragDev = dragDev
-        self.params = [initialInclination, rampLength, timeStep, simTime]
+class ShootingMethod:
+    def __init__ (self, t, dt, target, mc, tol):
+        self.t = t
+        self.dt = dt
+        self.target = target
+        self.mc = mc
+        self.tol = tol
+        self.apogee = 0
+        self.mc = mc
+        self.mc.setVerbose(False)
 
+    def run(self):
+        while (np.abs(self.apogee - self.target) > self.tol):
+            i = np.sign(self.apogee - self.target)
 
-    def run():
-        pass
+            self.mc.flush()
+            self.mc.setTbrakes(self.t)
+            self.mc.run()
 
-    def simpleShoot(self, t0, dt, targetApogee, tol):
-        t = t0
-        # Loop
-        apogee = targetApogee + 2 * tol
-        while(np.abs(targetApogee - apogee) > tol):
-            apogee = np.max(-Trajectory.calculateTrajectoryWithAirbrakes(self.rocket,\
-            self.initialInclination, self.launchRampLength, self.timeStep,\
-            self.simulationTime, t, self.Cbrakes_in, self.dragDev,\
-            self.windObj)[1][:,2])
-            a = np.sign(targetApogee - apogee)
-            if t != t0:
-                if a != b: dt /= 2
-            else:
-                b = a
-            t += a * dt
-            print(str(t).ljust(20, ' ') + str(apogee).ljust(20, ' '))
+            self.showProgess()
 
-    def stochasticShoot(self, t0, dt, targetApogee, tol, Tbrakes = 0, Cbrakes_in = 0):
-        t = t0
-        # Loop
-        apogee = targetApogee + 2 * tol
-        while(np.abs(targetApogee - apogee) > tol):
-            mcResult = MonteCarlo(100, self.rocket, self.params,\
-            thrustFreq = self.thrustFreq, thrustDev = self.thrustDev,\
-            dragDev = self.dragDev, wind = self.windObj,\
-            doSave = False, verbose = False, Tbrakes = t, Cbrakes_in = 1.0)
+            self.apogee = self.mc.getMeanApogee()
+            j = np.sign(self.apogee - self.target)
 
-            mcResult.run()
+            if i != j: self.dt /= 2
 
-            apogee = np.mean(mcResult.apogees[np.nonzero(mcResult.apogees)])
-            apogee = np.mean(mcResult.apogees[0])
-            #print(apogee)
-            print(str(t).ljust(20, ' ') + str(apogee).ljust(20, ' '))
+            if self.apogee < self.target - self.tol: self.t += self.dt
+            if self.apogee > self.target + self.tol: self.t -= self.dt
 
-            a = np.sign(targetApogee - apogee)
-            if t != t0:
-                if a != b: dt /= 2
-            else:
-                b = a
-            t += a * dt
+        print(self.genTrajectory())
+
+    def genTrajectory(self):
+        traj = self.mc.getTrajectory(self.target, self.tol)
+        pos = -traj[1].T[2]
+        vel = -traj[4].T[2]
+        ap_i = np.where(vel < 0)[0][0]
+        apogee = np.max(pos)
+        pos = pos[0:ap_i]
+        vel = vel[0:ap_i]
+        vel_func = interp1d(pos, vel)
+        pos_of_interest = np.arange(10, int(apogee), 1)
+        vel_of_interest = vel_func(pos_of_interest)
+
+        out = open("out.txt", 'w')
+        for i in range(len(pos_of_interest)):
+            out.write(str(pos_of_interest[i]) + '\t' + str(vel_of_interest[i]) + '\n')
+        out.close()
+        return apogee
+
+    def showProgess(self):
+        print(self.t, self.dt, self.apogee)
+
 
 class MonteCarlo:
     def __init__(self, n, rocket, params, thrustFreq = 0, thrustDev = 0,\
     dragDev = 0, wind = Wind.nullWind(), doSave = True, verbose = True,\
-    Tbrakes = 60, Cbrakes_in = 0, target = 3048, type = 'default'):
+    Tbrakes = 1e30, Cbrakes_in = 0, target = 3048, type = 'default'):
         self.n = n
         self.type = type
         self.target = target
@@ -111,6 +104,7 @@ class MonteCarlo:
         self.verbose = verbose
         self.Tbrakes = Tbrakes
         self.Cbrakes_in = Cbrakes_in
+        self.trajectories = [0]*n
         if type == 'default':
             self.apogees = np.zeros(n)
             self.run = self.run_default
@@ -175,7 +169,7 @@ class MonteCarlo:
         "Mean range".ljust(20) + \
         "Success".ljust(20))
 
-        print('-'*71)
+        print('-'*141)
 
         print(\
         "{} / {}".format(self.i, self.n).ljust(20) + \
@@ -190,6 +184,9 @@ class MonteCarlo:
         print('\n' + "  " + pbar*chr(9619) + (fullbar - pbar)*chr(9617) + '\n')
 
         print(self)
+
+    def print_gng(self):
+        print(str(round(self.meanApogee, 2)) + "+-" + str(round(self.meanRange/2, 2)))
 
     def run_default(self):
         global interrupted
@@ -214,6 +211,7 @@ class MonteCarlo:
 
 
             self.apogees[self.i] = np.max(-trajectory[1][:,2])
+            self.trajectories[self.i] = trajectory
 
             if self.doSave:
                 self.save()
@@ -276,6 +274,10 @@ class MonteCarlo:
 
         interrupted = False
         if self.verbose: print("Process terminated, id: {}".format(self.id))
+        self.meanRange = np.abs(np.mean(self.abmin_apogees - self.abmax_apogees))
+        self.abmax_meanApogee = np.mean(self.abmax_apogees)
+        self.abmin_meanApogee = np.mean(self.abmin_apogees)
+        self.meanApogee = np.mean([self.abmax_meanApogee, self.abmin_meanApogee])
         return (self.i)/self.n * 100
 
     def getMeanDelta():
@@ -283,6 +285,19 @@ class MonteCarlo:
 
     def getDeltas():
         return self.deltas
+
+    def getMeanApogee(self):
+        return np.mean(self.apogees)
+
+    def setVerbose(self, bol):
+        self.verbose = bol
+
+    def setTbrakes(self, t):
+        self.Tbrakes = t
+
+    def getTrajectory(self, target, tol):
+        for traj in self.trajectories:
+            if np.abs(np.max(-traj[1][:,2]) - target) < tol: return traj
 
     @staticmethod
     def fromFile(id):

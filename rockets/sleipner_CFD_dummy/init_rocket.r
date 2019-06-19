@@ -17,4 +17,3 @@ initial_moi = 0.11875, 16.188, 16.188
 
 Motor:
 motor = ../motors/CesaroniM1450.dot
-

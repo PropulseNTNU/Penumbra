@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 from Rocket1 import Motor
 from lib.File_utilities import find_parameter, unwrap_CFD_report
+verbose = False
 
 # Define some things for plotting
 font = {'family': 'sans-serif', 'weight': 'bold', 'size': 16}
@@ -21,16 +22,18 @@ plt.rc('font', **font)
 plt.rcParams['text.latex.preamble'] = [r'\boldmath']
 
 class RocketCFD:
-    def __init__(self, *args):
-        print('Initializing rocket..')
+    def __init__(self, *args, dragDev = 0):
+        if verbose: print('Initializing rocket..')
+        self.__dragDev = dragDev
+        self.__k = np.random.normal(scale=dragDev)
         self.__initMass = args[0]
         self.__initInertiaMatrix = args[1]
         self.__initCOM = args[2]
         self.__length = args[3]
         self.__motor = args[4]
 
-        # Print motor specs
-        print(self.__motor)
+        # if verbose: print motor specs
+        if verbose: print(self.__motor)
 
         # for plotting, array of time during burn phase
         self.__time = np.arange(0, self.__motor.getBurnTime(), 5e-4)
@@ -46,23 +49,34 @@ class RocketCFD:
 #         def rotationMatrix(AoA):
 #             sa, ca = np.sin(AoA*np.pi/180.0), np.cos(AoA*np.pi/180.0)
 #             return np.array([[ca, sa],[-sa, ca]])
-#      
+#
+#
 #         # Initialize aeroforces (a 2xn matrix with drag as row 1 and lift as row 2)
 #         for i in range(len(self.__AoAarray)):
 #             rotMat = rotationMatrix(self.__AoAarray[i])
 #             self.__aeroForces[:,i] = rotMat@self.__aeroForces[:,i]
 # =============================================================================
-        print('\tInterpolating the drag force..')
+
+        if verbose: print('\tInterpolating the drag force..')
         self.__Dragforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__drag)
-        print('\tInterpolating the lift force..')
+        if verbose: print('\tInterpolating the lift force..')
         self.__Liftforce = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__lift)
-        print('\tInterpolating the moment about COM (component normal to aerodynamic plane)..')
+        if verbose: print('\tInterpolating the moment about COM (component normal to aerodynamic plane)..')
         self.__MomentAboutCOM = interp2d(self.__AoAarray, self.__freeAirStreamSpeeds, self.__moment)
         # Done
-        print('Rocket initialized!\n')
+        if verbose: print('Rocket initialized!\n')
+
 
     def getMotor(self):
         return self.__motor
+
+    def setDragDev(self, dragDev):
+        self.__dragDev = dragDev
+        self.__k = np.random.normal(scale=dragDev)
+
+    def refresh(self):
+        self.__k = np.random.normal(scale=self.__dragDev)
+        self.getMotor().refresh()
 
     def getMass(self, t):
         return self.__initMass + self.__motor.getMass(t) - self.__motor.getMass(0)
@@ -137,7 +151,7 @@ class RocketCFD:
 
     def getAeroData(self):
         return self.__AoAarray, self.__freeAirStreamSpeeds, self.__drag, self.__lift, self.__moment
-    
+
     def getStabilityMargin(self, position, velocity, AoA, t=0):
         """
         Stability margin in units of body diameters (body calibers)
@@ -150,12 +164,12 @@ class RocketCFD:
         if type(state) == bool:
             self.__compressibility = state
         else:
-            print("Error: Enter either True or False in 'compressibleFlow'.")
+            if verbose: print("Error: Enter either True or False in 'compressibleFlow'.")
             exit(1)
 
     def getCompressibilityState(self):
         return self.__compressibility
-    
+
     def getInertiaMatrix(self, t):
         """
         :param t: [float] point in time [s]
@@ -187,7 +201,7 @@ class RocketCFD:
         # Plots of rocket characteristics (during burn phase)
         time = self.__time
         burnTime = self.__motor.getBurnTime()
-        print('Creating plot of COM and mass...')
+        if verbose: print('Creating plot of COM and mass...')
         COM = np.array([self.getCOM(t)[0] for t in time])
         mass = np.array([self.getMass(t) for t in time])
         plt.figure()
@@ -202,7 +216,7 @@ class RocketCFD:
         ax2.grid()
         plt.subplots_adjust(hspace=0.5)
         # Moment of inertia
-        print('Creating plots of rotational/longitudinal moment of inertia...')
+        if verbose: print('Creating plots of rotational/longitudinal moment of inertia...')
         steps = len(time)
         Ixx = np.zeros(steps)
         Iyy = np.zeros(steps)
@@ -223,9 +237,63 @@ class RocketCFD:
         ax2.grid()
         plt.subplots_adjust(hspace=0.5)
         plt.show()
-        print('Plotting done!\n')
+        if verbose: print('Plotting done!\n')
 
-    
+
+# =============================================================================
+#     @staticmethod
+#     def from_file_without_AoAspeed(initFile, sampleReport, path_to_file=''):
+#         """
+#         Create an instance of CFDrocket by reading some files
+#
+#         example: initFile.dot as initFile, myMotor.dot as motor and CFD files as drag.dot, lift.dot, moments.dot
+#                             -stored in folder 'myRocket2' (see 'Tests' folder)
+#
+#                 in 'initFile.dot':
+#
+#                 initial_mass = value of initial mass
+#                 initial_moi = Ixx, Iyy, Izz
+#                 initial_com = x-value of initial COM (this one is negative!)
+#                 length = value of rocket total length
+#                  motor = myMotor.dot
+#
+#                 myRocket = Rocket.from_file('initFile.dot', 'sample-report.dot',
+#                                             'myRocket2/')
+#
+#         :param initFile: The file with content specified above
+#         :param sampleReport: The CFD file with aero moments about COM.
+#                             Add sampling period, alpha_max, delta_v, v0 values to bottom of sampleReport:
+#                                             period = ..
+#                                             alpha_max = ..
+#                                             .
+#                                             .
+#                                             .
+#
+#         :param path_to_file: The path to the files above relative to current path (none by default)
+#
+#         return: A rocket instance with specs from initFile and CFD.
+#         """
+#         path = path_to_file + initFile
+#         initMass = find_parameter(path, 'initial_mass')  # in kilo grams
+#         initMOI = find_parameter(path, 'initial_moi')
+#         initMOI = np.diag(np.array([x.strip() for x in initMOI.split(',')]).astype(float))  # in kg*m^2
+#         initCOM = find_parameter(path, 'initial_com') # in meters
+#         length = find_parameter(path, 'length') # in meters
+#         motor = Motor.from_file(path_to_file + find_parameter(path, 'motor'))
+#
+#         path = path_to_file + sampleReport
+#         T = find_parameter(path, 'period')
+#         alpha_max = find_parameter(path, 'alpha_max') # In degrees
+#         delta_v = find_parameter(path, 'delta_v')  # In mach
+#         v0 = find_parameter(path, 'v0') # In mach
+#         alpha, air_speed, drag, lift, moment = unwrap_report1(path,
+#                                                               int(T), float(alpha_max), float(delta_v), float(v0))
+#
+#         return RocketCFD(float(initMass), initMOI, float(initCOM), float(length), motor, air_speed,
+#                       alpha, drag, lift,
+#                       moment)
+# =============================================================================
+
     @staticmethod
     def from_file(initFile, drag_report, lift_report, moment_report, path_to_file=''):
         """
@@ -241,7 +309,7 @@ class RocketCFD:
                         length = value of rocket total length
                          motor = myMotor.dot
 
-                        myRocket = Rocket.from_file('initFile.dot', 'drag_report', 
+                        myRocket = Rocket.from_file('initFile.dot', 'drag_report',
                                                     'lift_report', 'moment_report')
 
                 :param path_to_file: The path to the files above relative to current path (none by default)

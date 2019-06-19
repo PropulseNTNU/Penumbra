@@ -42,6 +42,9 @@ class Nose:
             self.__density = args[2]
         if verbose: print("Nose initialized!\n")
 
+    def setLength(self, newLength):
+        self.__length = newLength
+
     def __str__(self):
         D = str(self.__diameter)
         d = str(self.__thickness*1e3)
@@ -724,7 +727,7 @@ class RocketSimple:
 
     def getLength(self):
         return self.__length
-    
+
     def getTransversalExtension(self):
         "The distance from center of body to fin tip"
         return self.__width
