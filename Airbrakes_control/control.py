@@ -8,10 +8,25 @@ max_extention=0.02 #the max length of the air brake flaps in meters. This is onl
 def integrate(prev_sum, value, step):
   return prev_sum + (value * step)
 
+def pros_to_deg(prosent):
+  return math.asin(prosent/100.0) * 180.0/math.pi
+
+
 def controller(error, kp, ki, riemann_sum, dt):#PI-controller
   #add a lower and upper bound to prevernt overflow
-  riemann_sum = integrate(riemann_sum, error, dt)#integrates error
-  return kp*error + ki*riemann_sum, riemann_sum
+  temp = integrate(riemann_sum, error, dt)
+  if temp < 40 and temp > -40: 
+    riemann_sum = integrate(riemann_sum, error, dt)#integrates error
+
+  prosent = kp*error + ki*riemann_sum
+  if prosent > 86.6:
+    return 60, riemann_sum
+  
+  elif prosent < 0.0:
+    return 0, riemann_sum
+  
+  else:
+    return pros_to_deg(prosent), riemann_sum
 
 
 #functions for testing
