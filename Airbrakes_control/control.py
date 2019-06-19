@@ -15,18 +15,18 @@ def pros_to_deg(prosent):
 def controller(error, kp, ki, riemann_sum, dt):#PI-controller
   #add a lower and upper bound to prevernt overflow
   temp = integrate(riemann_sum, error, dt)
-  if temp < 40 and temp > -40: 
+  if temp < 40 and temp > -40:
     riemann_sum = integrate(riemann_sum, error, dt)#integrates error
 
   prosent = kp*error + ki*riemann_sum
   if prosent > 86.6:
     return 86.6, riemann_sum
-  
+
   elif prosent < 0.0:
     return 0, riemann_sum
-  
+
   else:
-    return pros_to_deg(prosent), riemann_sum
+    return prosent, riemann_sum
 
 
 #functions for testing
@@ -38,12 +38,12 @@ def test_modifications(ref_u, prev_u, dt):#Calculates the actual actuation based
     return ref_u
 
   if ref_u>prev_u:
-    prev_u+=(60.0/0.13)*dt#Calculates the servo position based on rotationspeed.
+    prev_u+=(66.66/0.13)*dt#Calculates the servo position based on rotationspeed.
     if prev_u>ref_u:#In this case the servo has reaced its reference, and ref_u can be returned
       return ref_u
     return prev_u
 
-  prev_u -= (60.0/0.13)*dt #Calculates the servo position based on rotationspeed.
+  prev_u -= (66.66/0.13)*dt #Calculates the servo position based on rotationspeed.
   if prev_u<ref_u: #In this case the servo has reaced its reference, and ref_u can be returned
     return ref_u
   return prev_u
