@@ -19,11 +19,11 @@ def controller(error, kp, ki, riemann_sum, dt):#PI-controller
     riemann_sum = integrate(riemann_sum, error, dt)#integrates error
 
   prosent = kp*error + ki*riemann_sum
-  if prosent > 86.6:
-    return 86.6, riemann_sum
+  if prosent > 56.6:
+    return 56.6, riemann_sum
 
-  elif prosent < 0.0:
-    return 0, riemann_sum
+elif prosent < -30.0:
+    return -30, riemann_sum
 
   else:
     return prosent, riemann_sum
