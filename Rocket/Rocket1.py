@@ -724,7 +724,7 @@ class RocketSimple:
 
     def getLength(self):
         return self.__length
-    
+
     def getTransversalExtension(self):
         "The distance from center of body to fin tip"
         return self.__width
@@ -750,7 +750,7 @@ class RocketSimple:
         return self.__COMofRocketStructure
 
     # Aerodynamics
-    def getCOP(self, position, velocity, AoA):
+    def getCOP(self, position, velocity, AoA, t):
         """
         :param AoA: [float] the angle of attack [rad]
 
