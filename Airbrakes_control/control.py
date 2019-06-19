@@ -20,7 +20,7 @@ def controller(error, kp, ki, riemann_sum, dt):#PI-controller
 
   prosent = kp*error + ki*riemann_sum
   if prosent > 86.6:
-    return 60, riemann_sum
+    return 86.6, riemann_sum
   
   elif prosent < 0.0:
     return 0, riemann_sum
