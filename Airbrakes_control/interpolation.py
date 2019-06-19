@@ -4,7 +4,7 @@ lookUpTable=[0,0,0,0,0,0,0,0,0,0,31.252312004367436,33.183753493984476,35.009635
 
 
 def get_reference_velocity(height): #Linear interpolation between heights
-    if height >= len(lookUpTable):
+    if height >= len(lookUpTable)-1:
         return lookUpTable[-1]
     x0=math.floor(height)
     x1 = x0 + 1
