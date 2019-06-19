@@ -287,7 +287,7 @@ class MonteCarlo:
         return self.deltas
 
     def getMeanApogee(self):
-        return np.mean(self.apogees)
+        return np.mean(self.apogees[0:self.i])
 
     def setVerbose(self, bol):
         self.verbose = bol
@@ -296,8 +296,26 @@ class MonteCarlo:
         self.Tbrakes = t
 
     def getTrajectory(self, target, tol):
-        for traj in self.trajectories:
+        for traj in self.trajectories[0:self.i]:
             if np.abs(np.max(-traj[1][:,2]) - target) < tol: return traj
+
+    def genTrajectory(self):
+        traj = self.getTrajectory(self.getMeanApogee(), 1)
+        pos = -traj[1].T[2]
+        vel = -traj[4].T[2]
+        ap_i = np.where(vel < 0)[0][0]
+        apogee = np.max(pos)
+        pos = pos[0:ap_i]
+        vel = vel[0:ap_i]
+        vel_func = interp1d(pos, vel)
+        pos_of_interest = np.arange(10, int(apogee), 1)
+        vel_of_interest = vel_func(pos_of_interest)
+
+        out = open("out.txt", 'w')
+        for i in range(len(pos_of_interest)):
+            out.write(str(pos_of_interest[i]) + '\t' + str(vel_of_interest[i]) + '\n')
+        out.close()
+        return apogee
 
     @staticmethod
     def fromFile(id):
