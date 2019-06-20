@@ -15,8 +15,9 @@ import Kinematics
 
 deg2rad = np.pi/180.0
 rad2deg = 1/deg2rad
-
+error_array = []
 cont_sig=[]
+i = 0
 # Initialize a rocket (CFD)
 path2 = '../rockets/sleipner_CFD/'
 path1 = '../rockets/sleipner_analytic/'
@@ -40,7 +41,6 @@ rampLength = 5.2
 timeStep = 0.03
 simTime = 30
 windObj = Wind.pinkWind(simTime, [1.5, 1.9], alt0 = 1.5, intensity = 0.1)
-
 params = [initialInclination, rampLength, timeStep, simTime]
 
 alt = np.zeros(int(simTime / timeStep) + 2)
@@ -49,12 +49,16 @@ acc = np.zeros(int(simTime / timeStep) + 2)
 def control_function(t, r, quat, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
     global T
     global cont_sig
+    global error_array, i
     Rbody2Inertial = Kinematics.Rquaternion(quat)
     rdotdot_world = Rbody2Inertial @ rdotdot[0:3].T
     if int((t / 0.03)) < len(alt): alt[int(t / 0.03)] = -r[2]
     if int((t / 0.03)) < len(acc): acc[int(t / 0.03)] = np.linalg.norm(rdotdot_world)
     a, error = (airbrakes_main(-r[2], -rdot[2], timeStep))
-    cont_sig.append(a)
+    if not i%4:
+        cont_sig.append(a)
+        error_array.append(error)
+    i += 1
     if t > T:
         print(round(t, 1), "Control signal: ", a, "error: ", error, "height: ", r[2], sep='\t')
         return Cbrakes_in*(a / 100)
@@ -73,7 +77,9 @@ def main():
     #ax[1][0].plot(t, alt)
     #ax[0][1].plot(t, acc)
     ax[1][1].plot(t, -velocity[:,2])
-    ax[0][1].plot(t, cont_sig)
+    ax[0][1].plot(t[:1001], cont_sig)
+    ax[1][0].plot(t[:1001], error_array)
+
     plt.show()
 
 main()
