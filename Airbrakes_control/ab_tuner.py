@@ -42,10 +42,15 @@ windObj = Wind.pinkWind(simTime, [1.5, 1.9], alt0 = 1.5, intensity = 0.1)
 
 params = [initialInclination, rampLength, timeStep, simTime]
 
+alt = np.zeros(int(simTime / timeStep) + 2)
+acc = np.zeros(int(simTime / timeStep) + 2)
+
 def control_function(t, r, quat, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
     global T
     Rbody2Inertial = Kinematics.Rquaternion(quat)
     rdotdot_world = Rbody2Inertial @ rdotdot[0:3].T
+    if int((t / 0.03)) < len(alt): alt[int(t / 0.03)] = -r[2]
+    if int((t / 0.03)) < len(acc): acc[int(t / 0.03)] = np.linalg.norm(rdotdot_world)
     a = (airbrakes_main(-r[2], -rdotdot_world[2], timeStep))
     if t > T:
         print(round(t, 1), Cbrakes_in*(a / 100), sep='\t')
@@ -59,9 +64,11 @@ def main():
     windObj = Wind.pinkWind(simTime, [1.5,  1.9], alt0 = 1.5, intensity = 8)
     t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity,thrust, windVelocities =\
     traj.calculateTrajectoryWithAirbrakes(rocket, initialInclination,\
-    rampLength, timeStep, simTime, Tbrakes = T, Cbrakes_in = C, conFunc = control_function, windObj = windObj)
+    rampLength, timeStep, simTime, Tbrakes = T, Cbrakes_in = C, conFunc = control_function)
     fig, ax = plt.subplots(nrows=2, ncols=2)
     ax[0][0].plot(t, -position.T[2])
+    ax[1][0].plot(t, alt)
+    ax[0][1].plot(acc.T)
     plt.show()
 
 main()
