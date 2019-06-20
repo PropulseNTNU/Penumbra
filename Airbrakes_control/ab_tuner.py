@@ -11,6 +11,7 @@ import TrajectoryWithBrakes as traj
 import Wind
 import Optimization as optim
 from airbrakes import airbrakes_main
+import Kinematics
 
 deg2rad = np.pi/180.0
 rad2deg = 1/deg2rad
@@ -41,17 +42,26 @@ windObj = Wind.pinkWind(simTime, [1.5, 1.9], alt0 = 1.5, intensity = 0.1)
 
 params = [initialInclination, rampLength, timeStep, simTime]
 
-def control_function(t, r, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
-    a = (airbrakes_main(-r[2], -rdotdot[2], timeStep))
-    print(a)
-    return Cbrakes_in*(a / 100)
+def control_function(t, r, quat, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
+    global T
+    Rbody2Inertial = Kinematics.Rquaternion(quat)
+    rdotdot_world = Rbody2Inertial @ rdotdot[0:3].T
+    a = (airbrakes_main(-r[2], -rdotdot_world[2], timeStep))
+    if t > T:
+        print(round(t, 1), Cbrakes_in*(a / 100), sep='\t')
+        return Cbrakes_in*(a / 100)
+    else:
+        print(round(t, 1), 0, sep='\t')
+        return 0
 
 def main():
     C = 0.001554391452
-    windObj = Wind.pinkWind(simTime, [1.5,  1.9], alt0 = 1.5, intensity = 0.1)
+    windObj = Wind.pinkWind(simTime, [1.5,  1.9], alt0 = 1.5, intensity = 8)
     t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity,thrust, windVelocities =\
     traj.calculateTrajectoryWithAirbrakes(rocket, initialInclination,\
     rampLength, timeStep, simTime, Tbrakes = T, Cbrakes_in = C, conFunc = control_function, windObj = windObj)
-    traj.printTrajectoryStatistics(rocket, position, velocity, t)
+    fig, ax = plt.subplots(nrows=2, ncols=2)
+    ax[0][0].plot(t, -position.T[2])
+    plt.show()
 
 main()

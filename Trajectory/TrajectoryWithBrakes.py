@@ -21,7 +21,7 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def default_conFunc(t, r, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
+def default_conFunc(t, r, quat, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
     return Cbrakes_in*np.exp(20*(t-Tbrakes))/(1+np.exp(20*(t-Tbrakes)))
 
 rdotdot = np.array([0, 0, 0])
@@ -104,8 +104,9 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj,
     global rdotdot
 
     r = x[0:3]
+    quat = x[3:7]
     rdot = x[7:10]
-    Cbrakes = conFunc(t, r, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable)
+    Cbrakes = conFunc(t, r, quat, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable)
     #print(Cbrakes)
 
     windVelocity = windObj.getWindVector(-x[2], t)
