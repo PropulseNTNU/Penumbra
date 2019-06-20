@@ -10,4 +10,4 @@ def get_reference_velocity(height): #Linear interpolation between heights
     x1 = x0 + 1
     y0 = lookUpTable[x0]
     y1 = lookUpTable[x1]
-    return y0+(y1-y0)*(height-x0)
+    return float(y0+(y1-y0)*(height-x0))

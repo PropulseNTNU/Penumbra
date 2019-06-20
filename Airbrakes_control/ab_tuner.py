@@ -16,6 +16,7 @@ import Kinematics
 deg2rad = np.pi/180.0
 rad2deg = 1/deg2rad
 
+cont_sig=[]
 # Initialize a rocket (CFD)
 path2 = '../rockets/sleipner_CFD/'
 path1 = '../rockets/sleipner_analytic/'
@@ -47,28 +48,32 @@ acc = np.zeros(int(simTime / timeStep) + 2)
 
 def control_function(t, r, quat, rdot, rdotdot, Cbrakes_in, Tbrakes, lookuptable):
     global T
+    global cont_sig
     Rbody2Inertial = Kinematics.Rquaternion(quat)
     rdotdot_world = Rbody2Inertial @ rdotdot[0:3].T
     if int((t / 0.03)) < len(alt): alt[int(t / 0.03)] = -r[2]
     if int((t / 0.03)) < len(acc): acc[int(t / 0.03)] = np.linalg.norm(rdotdot_world)
-    a = (airbrakes_main(-r[2], -rdotdot_world[2], timeStep))
+    a, error = (airbrakes_main(-r[2], -rdot[2], timeStep))
+    cont_sig.append(a)
     if t > T:
-        print(round(t, 1), Cbrakes_in*(a / 100), sep='\t')
+        print(round(t, 1), "Control signal: ", a, "error: ", error, "height: ", r[2], sep='\t')
         return Cbrakes_in*(a / 100)
     else:
-        print(round(t, 1), 0, sep='\t')
+        print(round(t, 1), "Control signal: ", "motor_burn", "error: ", error, "height: ", r[2], sep='\t')
         return 0
 
 def main():
     C = 0.001554391452
-    windObj = Wind.pinkWind(simTime, [1.5,  1.9], alt0 = 1.5, intensity = 8)
+    windObj = Wind.pinkWind(simTime, [1.5, 1.9], alt0 = 1.5, intensity = 4)
     t, position, euler, AoA, velocity, angularVelocity, drag, lift, gravity,thrust, windVelocities =\
     traj.calculateTrajectoryWithAirbrakes(rocket, initialInclination,\
-    rampLength, timeStep, simTime, Tbrakes = T, Cbrakes_in = C, conFunc = control_function)
+    rampLength, timeStep, simTime, Tbrakes = T, Cbrakes_in = C, conFunc = control_function, windObj = windObj)
     fig, ax = plt.subplots(nrows=2, ncols=2)
     ax[0][0].plot(t, -position.T[2])
-    ax[1][0].plot(t, alt)
-    ax[0][1].plot(acc.T)
+    #ax[1][0].plot(t, alt)
+    #ax[0][1].plot(t, acc)
+    ax[1][1].plot(t, -velocity[:,2])
+    ax[0][1].plot(t, cont_sig)
     plt.show()
 
 main()
