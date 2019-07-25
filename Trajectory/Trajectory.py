@@ -20,12 +20,12 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, dragDeviation = 0, windObj = Wind.nullWind(), trim = False):
+def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, dragDeviation = 0, windObj = Wind.nullWind(), trim = False, initial_position=0):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
     # x is the state of the rocket
     # x = [position, quaternion, linear velocity, angular velocity]
-    (x0, initialDirection) = initialState(rocket, initialInclination)
+    (x0, initialDirection) = initialState(rocket, initialInclination, initial_position)
     t, x, AoA, forces, acc, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
     n = len(t)
@@ -50,7 +50,7 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
 
     return t, position, euler, AoA, velocity, acceleration, angularVelocity, drag, lift, gravity, thrust, windVelocities
 
-def initialState(rocket, initialInclination):
+def initialState(rocket, initialInclination, initial_position=np.zeros(3)):
     # Initial inclination of rocket
     initialPitch = np.pi/2-initialInclination
     # Calculate rotation matrix (the rocket orientation measured in world coords.)
@@ -59,6 +59,8 @@ def initialState(rocket, initialInclination):
     # rocket longitudinal axis in world frame (x-axis of body)
     initialDirection= R[:,0]
     initialPosition = rocket.getLength()*initialDirection
+    if initial_position.any():
+        initialPosition = initial_position
     initialQuaternion = Kinematics.euler2quaternion(initialPitch, 0, 0)
     initialLinearVelocity = np.array([0, 0, 0])
     initialAngularVelocity = np.array([0, 0, 0])
@@ -143,7 +145,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
         totalMoment = np.array([0, 0, 0])
     else:
         # After launch ramp, allow it to rotate (now calculating torques about COM)
-        armAero = rocket.getCOP(position, airVelocity, AoA) - rocket.getCOM(t)
+        armAero = rocket.getCOP(position, airVelocity, AoA, t) - rocket.getCOM(t)
         totalMoment = np.cross(armAero, drag + lift)
     genForceBody = H.T @ np.concatenate((totalForce, totalMoment))
     # find dx
