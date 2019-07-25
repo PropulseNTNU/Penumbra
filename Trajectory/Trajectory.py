@@ -20,13 +20,13 @@ import Forces
 # Avoid division by 0 by adding epsilon to all denominators
 epsilon = 1e-10
 
-def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, dragDeviation = 0, windObj = Wind.nullWind(), trim = False, initial_position=0):
+def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, simulationTime, dragDeviation = 0, windObj = Wind.nullWind(), trim = False, initial_position=np.zeros(3), initial_velocity=np.zeros(3), advance_burntime=0):
 
     dragDeviation = np.random.normal(scale = dragDeviation)
     # x is the state of the rocket
     # x = [position, quaternion, linear velocity, angular velocity]
-    (x0, initialDirection) = initialState(rocket, initialInclination, initial_position)
-    t, x, AoA, forces, acc, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation)
+    (x0, initialDirection) = initialState(rocket, initialInclination, initial_position, initial_velocity)
+    t, x, AoA, forces, acc, windVelocities = integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation, advance_burntime)
     (position, euler, linearVelocity, angularVelocity) = unwrapState(x)
     n = len(t)
     drag = np.array([forces[i][:,0] for i in range(n)])
@@ -50,7 +50,7 @@ def calculateTrajectory(rocket, initialInclination, launchRampLength, timeStep, 
 
     return t, position, euler, AoA, velocity, acceleration, angularVelocity, drag, lift, gravity, thrust, windVelocities
 
-def initialState(rocket, initialInclination, initial_position=np.zeros(3)):
+def initialState(rocket, initialInclination, initial_position=np.zeros(3), initial_velocity=np.zeros(3)):
     # Initial inclination of rocket
     initialPitch = np.pi/2-initialInclination
     # Calculate rotation matrix (the rocket orientation measured in world coords.)
@@ -64,17 +64,19 @@ def initialState(rocket, initialInclination, initial_position=np.zeros(3)):
     initialQuaternion = Kinematics.euler2quaternion(initialPitch, 0, 0)
     initialLinearVelocity = np.array([0, 0, 0])
     initialAngularVelocity = np.array([0, 0, 0])
+    if initial_velocity.any():
+        initialLinearVelocity = np.linalg.inv(R)@initial_velocity
     # Initial state vector
     x0 = np.concatenate((initialPosition, initialQuaternion,
     initialLinearVelocity, initialAngularVelocity))
     return (x0, initialDirection)
 
-def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation):
+def integrateEquationsMotion(rocket, x0, launchRampLength, initialDirection, timeStep, simulationTime, windObj, dragDeviation, advance_burntime):
     t = np.arange(0, simulationTime + timeStep, timeStep)
-    sol, AoA, force, acc, windVelocities = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj, dragDeviation))
+    sol, AoA, force, acc, windVelocities = RK4(equationsMotion, 0, simulationTime, timeStep, x0, RHS_args=(rocket, launchRampLength, initialDirection, windObj, dragDeviation, advance_burntime))
     return t, sol, AoA, force, acc, windVelocities
 
-def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, dragDeviation):
+def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, dragDeviation, advance_burntime):
     """
     x: [np.array] the current state of rocket
     t: [float] at time t
@@ -125,7 +127,7 @@ def equationsMotion(x, t, rocket, launchRampLength, initialDirection, windObj, d
     aeroForces = rocket.getAeroForces(position, airVelocity, AoA)
     drag = aeroForces[0]*dirDragBody
     lift = aeroForces[1]*dirLiftBody
-    thrust = np.array([rocket.getMotor().thrust(t), 0, 0])
+    thrust = np.array([rocket.getMotor().thrust(t+advance_burntime), 0, 0])
     gravityBody = RotationInertial2Body @ gravityWorld
     # inertia matrix and coriolis matrix for equations of motion
     # seen from origin of body frame, not from center of mass (See Fossen)
